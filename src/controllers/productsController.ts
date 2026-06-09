@@ -1,5 +1,5 @@
 import { createCursor, cursorFromB64, cursorToB64 } from '@/services/cursorService'
-import { getProductsByCursor } from '@/services/productsServices'
+import { getProductsByCursor } from '@/services/productsService'
 import { response } from '@/utils/response'
 import type { Request, Response } from 'express'
 

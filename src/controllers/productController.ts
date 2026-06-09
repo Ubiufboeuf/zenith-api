@@ -1,4 +1,4 @@
-import { getProductById } from '@/services/productSerivces'
+import { getProductById } from '@/services/productSerivce'
 import { response } from '@/utils/response'
 import type { Request, Response } from 'express'
 
