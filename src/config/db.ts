@@ -1,7 +1,7 @@
 import { createClient, type Client } from '@libsql/client'
 import { TURSO_AUTH_TOKEN, TURSO_DATABASE_URL } from '@/lib/constants'
 
-export let db: Client | undefined
+export let db: Client
 
 export async function connectToDB () {
   if (!TURSO_DATABASE_URL) {

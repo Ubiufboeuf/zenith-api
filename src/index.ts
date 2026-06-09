@@ -2,6 +2,8 @@ import express from 'express'
 import { connectToDB } from '@/config/db'
 import { getErrorsDetails } from '@/utils/errors'
 import { PORT } from '@/lib/constants'
+import { productRouter } from '@/routes/productRouter'
+import { ROUTES } from '@/lib/routes'
 
 async function main () {
   try {
@@ -15,6 +17,8 @@ async function main () {
   const app = express()
 
   app.get('/', (_, res) => res.status(404).end())
+  app.use(ROUTES.PRODUCT, productRouter)
+
   app.listen(PORT, () => console.log(`Servidor levantado en el puerto :${PORT}`))
 }
 
