@@ -1,10 +1,21 @@
 import express from 'express'
+import { connectToDB } from '@/config/db'
+import { getErrorsDetails } from '@/utils/errors'
+import { PORT } from '@/lib/constants'
 
-const PORT = 1234
-const app = express()
+async function main () {
+  try {
+    await connectToDB()
+  } catch (err) {
+    const error = getErrorsDetails(err)
+    console.error(`${error.message} ${error.cause ? `(${error.cause})` : ''}`)
+    return
+  }
 
-app.get('/', (req, res) => {
-  res.send('a')
-})
+  const app = express()
 
-app.listen(PORT, () => console.log(`Servidor levantado en el puerto :${PORT}`))
+  app.get('/', (_, res) => res.status(404).end())
+  app.listen(PORT, () => console.log(`Servidor levantado en el puerto :${PORT}`))
+}
+
+await main()
