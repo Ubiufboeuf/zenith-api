@@ -1,3 +1,4 @@
 export const ROUTES = {
-  PRODUCT: '/product'
+  PRODUCT: '/product',
+  PRODUCTS: '/products'
 }
