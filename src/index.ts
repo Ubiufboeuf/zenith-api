@@ -4,6 +4,7 @@ import { getErrorsDetails } from '@/utils/errors'
 import { PORT } from '@/lib/constants'
 import { productRouter } from '@/routes/productRouter'
 import { ROUTES } from '@/lib/routes'
+import { productsRouter } from './routes/productsRouter'
 
 async function main () {
   try {
@@ -15,9 +16,12 @@ async function main () {
   }
 
   const app = express()
+  app.disable('x-powered-by')
 
-  app.get('/', (_, res) => res.status(404).end())
   app.use(ROUTES.PRODUCT, productRouter)
+  app.use(ROUTES.PRODUCTS, productsRouter)
+
+  app.use((req, res) => res.status(404).end())
 
   app.listen(PORT, () => console.log(`Servidor levantado en el puerto :${PORT}`))
 }
