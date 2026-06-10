@@ -1,5 +1,5 @@
 import { db } from '@/config/db'
-import type { Sale } from '@/types/saleTypes'
+import type { Sale } from '@/types/salesTypes'
 import { createCursor } from './cursorService'
 import type { Cursor } from '@/types/cursorTypes'
 

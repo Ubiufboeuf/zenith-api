@@ -1,8 +1,8 @@
 import { db } from '@/config/db'
 import type { Cursor } from '@/types/cursorTypes'
-import type { Product } from '@/types/productTypes'
+import type { Product } from '@/types/productsTypes'
 import { createCursor } from './cursorService'
-import { isValidProduct } from '@/validations/productValidations'
+import { isValidProduct } from '@/validations/productsValidations'
 
 export async function getProductsByCursor (cursor: Cursor | null, limit: number): Promise<{ list: Product[], nextCursor: Cursor | null }> {
   const lastId = cursor?.lastId ?? null

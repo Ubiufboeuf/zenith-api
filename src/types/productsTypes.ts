@@ -1,4 +1,4 @@
-import type { productSchema } from '@/schemas/productSchema'
+import type { productSchema } from '@/schemas/productsSchemas'
 import type z from 'zod'
 
 export type Currency = '$' | 'U$S'

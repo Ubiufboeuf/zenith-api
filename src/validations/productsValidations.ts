@@ -1,5 +1,5 @@
-import { productSchema } from '@/schemas/productSchema'
-import type { Product } from '@/types/productTypes'
+import { productSchema } from '@/schemas/productsSchemas'
+import type { Product } from '@/types/productsTypes'
 import z from 'zod'
 
 export function isValidProduct (data: unknown): data is Product {
