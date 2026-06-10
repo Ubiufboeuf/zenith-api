@@ -5,6 +5,7 @@ import { PORT } from '@/lib/constants'
 import { productRouter } from '@/routes/productRouter'
 import { ROUTES } from '@/lib/routes'
 import { productsRouter } from './routes/productsRouter'
+import { saleRouter } from './routes/saleRouter'
 
 async function main () {
   try {
@@ -20,6 +21,7 @@ async function main () {
 
   app.use(ROUTES.PRODUCT, productRouter)
   app.use(ROUTES.PRODUCTS, productsRouter)
+  app.use(ROUTES.SALE, saleRouter)
 
   app.use((req, res) => res.status(404).end())
 
