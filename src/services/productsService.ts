@@ -2,6 +2,7 @@ import { db } from '@/config/db'
 import type { Cursor } from '@/types/cursorTypes'
 import type { Product } from '@/types/productTypes'
 import { createCursor } from './cursorService'
+import { isValidProduct } from '@/validations/productValidations'
 
 export async function getProductsByCursor (cursor: Cursor | null, limit: number): Promise<{ list: Product[], nextCursor: Cursor | null }> {
   const lastId = cursor?.lastId ?? null
@@ -24,4 +25,20 @@ export async function getProductsByCursor (cursor: Cursor | null, limit: number)
       ? createCursor(list.at(-1)?.id)
       : null
   }
+}
+
+export async function getProductById (id: string): Promise<Product | undefined> {
+  const query = 'SELECT * FROM products WHERE id = ?'
+  const result = await db.execute(query, [id])
+
+  if (!result?.rows.length) {
+    return
+  }
+  
+  const product = result.rows[0]
+  if (!isValidProduct(product)) return
+  
+  console.log(product)
+
+  return product
 }

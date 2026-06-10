@@ -2,10 +2,9 @@ import express from 'express'
 import { connectToDB } from '@/config/db'
 import { getErrorsDetails } from '@/utils/errors'
 import { PORT } from '@/lib/constants'
-import { productRouter } from '@/routes/productRouter'
 import { ROUTES } from '@/lib/routes'
 import { productsRouter } from './routes/productsRouter'
-import { saleRouter } from './routes/saleRouter'
+import { salesRouter } from './routes/salesRouter'
 
 async function main () {
   try {
@@ -19,9 +18,8 @@ async function main () {
   const app = express()
   app.disable('x-powered-by')
 
-  app.use(ROUTES.PRODUCT, productRouter)
   app.use(ROUTES.PRODUCTS, productsRouter)
-  app.use(ROUTES.SALE, saleRouter)
+  app.use(ROUTES.SALES, salesRouter)
 
   app.use((req, res) => res.status(404).end())
 

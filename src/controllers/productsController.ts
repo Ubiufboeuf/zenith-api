@@ -1,5 +1,5 @@
 import { createCursor, cursorFromB64, cursorToB64 } from '@/services/cursorService'
-import { getProductsByCursor } from '@/services/productsService'
+import { getProductById, getProductsByCursor } from '@/services/productsService'
 import { response } from '@/utils/response'
 import type { Request, Response } from 'express'
 
@@ -29,4 +29,15 @@ export async function getProducts (req: Request, res: Response) {
     products,
     nextCursor: nextCursor ? cursorToB64(nextCursor) : null
   })
+}
+
+export async function getProduct (req: Request<{ id: string }>, res: Response) {
+  const { id } = req.params
+
+  const product = await getProductById(id)
+  if (!product) {
+    return response(res, 'No se encontró el producto', { status: 404 })
+  }
+  
+  res.json(product)
 }
