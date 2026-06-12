@@ -1,6 +1,9 @@
 import { createCursor, cursorFromB64, cursorToB64 } from '@/services/cursorService'
-import { getSaleById, getSalesByCursor } from '@/services/salesService'
+import { addNewSale, getSaleById, getSalesByCursor } from '@/services/salesService'
+import { getErrorsDetails } from '@/utils/errors'
+import { getBody } from '@/utils/request'
 import { response } from '@/utils/response'
+import { isValidCreateSaleBody } from '@/validations/salesValidations'
 import type { Request, Response } from 'express'
 
 export async function getSales (req: Request, res: Response) {
@@ -40,4 +43,28 @@ export async function getSale (req: Request<{ id: string }>, res: Response) {
   }
   
   res.json(product)
+}
+
+export async function createSale (req: Request, res: Response) {
+  const body = await getBody(req)
+  if (!body || typeof body !== 'string') {
+    return response(res, 'Cuerpo de la petición inválido', { status: 400 })
+  }
+
+  const sale = JSON.parse(body)
+  if (!isValidCreateSaleBody(sale)) {
+    return response(res, 'Datos de la venta inválidos', { status: 400 })
+  }
+
+  console.log(sale)
+  try {
+    await addNewSale(sale)
+  } catch (err) {
+    const error = getErrorsDetails(err)
+    console.error(error)
+
+    return response(res, 'Hubo un error guardando la venta', { status: 500 })
+  }
+
+  return res.send(200).end()
 }
