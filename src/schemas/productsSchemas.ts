@@ -11,3 +11,10 @@ export const productSchema = z.object({
   sale_currency: z.string(),
   stock: z.number()
 })
+
+export const createSaleProductSchema = z.object({
+  product_id: z.string(),
+  quantity: z.number(),
+  unit_price_at_moment: z.number(),
+  discount: z.number()
+})
