@@ -1,32 +1,26 @@
-import { CURRENCIES } from '@/lib/constants'
+import { CURRENCIES, PAYMET_STATUS, SALE_STATUS } from '@/lib/constants'
 import z from 'zod'
 import { createSaleProductSchema } from './productsSchemas'
 import { createSalePaymentSchema } from './paymentsSchemas'
 
 export const saleBodySchema = z.object({
   id: z.string(),
-  // state: 'pending' // ej, si no hay pago, queda pendiente, pero la venta se guarda
-  date: z.string(),
+  created_at: z.string(),
+  last_modified: z.string(),
   total: z.number(),
   total_discount: z.number(),
   currency: z.enum(CURRENCIES),
   products: z.array(createSaleProductSchema),
-  payments: z.array(createSalePaymentSchema).optional()
-  // modified: boolean // para saber si la venta se ha modificado en algún momento
+  payments: z.array(createSalePaymentSchema).optional(),
+  status: z.enum(SALE_STATUS),
+  payment_status: z.enum(PAYMET_STATUS),
+  client_id: z.string().optional(),
+  user_id: z.string()
 })
 
-export const createSaleBodySchema = z.object({
-  // state: 'pending' // ej, si no hay pago, queda pendiente, pero la venta se guarda
-  date: z.string(),
-  total: z.number(),
-  total_discount: z.number(),
-  currency: z.enum(CURRENCIES),
-  products: z.array(createSaleProductSchema),
-  payments: z.array(createSalePaymentSchema).optional()
+export const createSaleBodySchema = saleBodySchema.omit({
+  id: true,
+  last_modified: true
 })
 
-export const editSaleBodySchema = saleBodySchema
-  .omit({
-    id: true
-  })
-  .partial()
+export const editSaleBodySchema = createSaleBodySchema.partial()

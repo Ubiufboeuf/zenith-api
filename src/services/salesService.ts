@@ -44,36 +44,34 @@ export async function getSaleById (id: string): Promise<Sale | undefined> {
 export async function addNewSale (saleData: CreateSaleBody) {
   const saleId = crypto.randomUUID()
 
-  const sale: Sale = {
-    id: saleId,
-    date: saleData.date,
-    total: saleData.total,
-    total_discount: saleData.total_discount,
-    currency: saleData.currency,
-    products: saleData.products,
-    payments: saleData.payments
-  }
-
   const transaction = await db.transaction('write')
 
   try {
     // Agregar venta (SALES)
     await transaction.execute({
-      sql: 'INSERT INTO sales (id, date, total, total_discount, currency) VALUES (?, ?, ?, ?, ?)',
+      sql: `INSERT
+        INTO sales
+          (id, total, total_discount, currency, payment_status, status, user_id, client_id)
+        VALUES
+          (?, ?, ?, ?, ?, ?, ?, ?)
+        `,
       args: [
-        sale.id,
-        sale.date,
-        sale.total,
-        sale.total_discount,
-        sale.currency
+        saleId,
+        saleData.total,
+        saleData.total_discount,
+        saleData.currency,
+        saleData.payment_status,
+        saleData.status,
+        saleData.user_id,
+        saleData.client_id ?? null
       ]
     })
 
     // Batch de detalles de producto (SALE_DETAILS)
     const detailPromises = saleData.products.map((p) => transaction.execute({
       sql: `
-        INSERT INTO sale_details (id, sale_id, product_id, quantity, unit_price_at_moment, discount) 
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO sale_details (id, sale_id, product_id, quantity, unit_price_at_moment, currency, discount) 
+        VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
       args: [
         crypto.randomUUID(),
@@ -81,6 +79,7 @@ export async function addNewSale (saleData: CreateSaleBody) {
         p.product_id,
         p.quantity,
         p.unit_price_at_moment,
+        p.currency,
         p.discount
       ]
     }))
@@ -107,7 +106,7 @@ export async function addNewSale (saleData: CreateSaleBody) {
     }
 
     // Confirmar la transacción de la bd
-    transaction.commit()
+    await transaction.commit()
     console.log(`Venta ${saleId} procesada con éxito junto con sus detalles y pagos.`)
 
     return { success: true, saleId }
@@ -117,11 +116,12 @@ export async function addNewSale (saleData: CreateSaleBody) {
       await transaction.rollback()
     } catch (rollbackError) {
       console.error('Error crítico al hacer ROLLBACK:', rollbackError)
-      return { success: false, rollbackError }
+      // return { success: false, rollbackError }
+      throw new HttpError('Error crítico del servidor', null, 500)
     }
 
     console.error('Error en la transacción de venta. Cambios revertidos.', error)
-    return { success: false, err: error }
+    throw new HttpError('Error guardando la venta', null, 500)
   }
 }
 
@@ -132,16 +132,24 @@ export async function modifySale (id: string, sale: EditSaleBody) {
   const query = `
     UPDATE sales
     SET
-      date = ?,
       total = ?,
-      total_discount = ?
+      total_discount = ?,
+      currency = ?,
+      status = ?,
+      payment_status = ?,
+      client_id = ?,
+      user_id = ?
     WHERE id = ?
   `
 
   await db.execute(query, [
-    sale.date ?? existingSale.date,
     sale.total ?? existingSale.total,
     sale.total_discount ?? existingSale.total_discount,
+    sale.currency ?? existingSale.currency,
+    sale.status ?? existingSale.status,
+    sale.payment_status ?? existingSale.payment_status,
+    sale.client_id ?? existingSale.client_id ?? null,
+    sale.user_id ?? existingSale.user_id,
     id
   ])
 }

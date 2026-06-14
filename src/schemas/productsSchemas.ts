@@ -1,3 +1,4 @@
+import { CURRENCIES } from '@/lib/constants'
 import z from 'zod'
 
 export const productSchema = z.object({
@@ -6,9 +7,9 @@ export const productSchema = z.object({
   qrcode: z.string().nullable(),
   description: z.string(),
   cost_price: z.number(),
-  cost_currency: z.string(),
+  cost_currency: z.enum(CURRENCIES),
   sale_price: z.number(),
-  sale_currency: z.string(),
+  sale_currency: z.enum(CURRENCIES),
   stock: z.number()
 })
 
@@ -16,5 +17,6 @@ export const createSaleProductSchema = z.object({
   product_id: z.string(),
   quantity: z.number(),
   unit_price_at_moment: z.number(),
+  currency: z.enum(CURRENCIES),
   discount: z.number()
 })
