@@ -4,8 +4,8 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "bun src/index.ts",
-    "watch": "bun --watch src/index.ts"
+    "start": "bun src/index.ts",
+    "dev": "bun --watch src/index.ts"
   },
   "devDependencies": {
     "@eslint/js": "10.0.1",
