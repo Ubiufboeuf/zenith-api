@@ -1,10 +1,11 @@
 import { createCursor, cursorFromB64, cursorToB64 } from '@/services/cursorService'
-import { addNewSale, getSaleById, getSalesByCursor } from '@/services/salesService'
+import { addNewSale, modifySale, getSaleById, getSalesByCursor } from '@/services/salesService'
 import { getErrorsDetails } from '@/errors'
 import { getBody } from '@/utils/request'
 import { response } from '@/utils/response'
-import { isValidCreateSaleBody } from '@/validations/salesValidations'
+import { isValidCreateSaleBody, isValidEditSaleBody } from '@/validations/salesValidations'
 import type { Request, Response } from 'express'
+import { HttpError } from '@/errors/HttpError'
 
 export async function getSales (req: Request, res: Response) {
   const { query } = req
@@ -67,4 +68,40 @@ export async function createSale (req: Request, res: Response) {
   }
 
   return res.send(200).end()
+}
+
+export async function editSale (req: Request, res: Response) {
+  const body = await getBody(req)
+  if (!body || typeof body !== 'string') {
+    return response(res, 'Cuerpo de la petición inválido', { status: 400 })
+  }
+  
+  const sale = JSON.parse(body)
+  if (!isValidEditSaleBody(sale)) {
+    const msg = sale.id === ''
+      ? 'Falta especificar el ID de la venta'
+      : 'Datos de la venta inválidos'
+    
+    return response(res, msg, { status: 400 })
+  }
+
+  if (!sale.id) {
+    return response(res, 'Falta especificar el ID de la venta', { status: 400 })
+  }
+
+  // console.log(sale)
+  try {
+    await modifySale(sale)
+  } catch (err) {
+    const error = getErrorsDetails(err)
+    console.error(error)
+
+    if (error instanceof HttpError) {
+      return response(res, error.message, { status: error.statusCode })
+    }
+
+    return response(res, 'Hubo un error guardando la venta', { status: 500 })
+  }
+
+  return response(res, `Venta ${sale.id} editada exitosamente`, { status: 200 })
 }

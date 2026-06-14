@@ -5,3 +5,7 @@ export const {
 } = process.env
 
 export const CURRENCIES = ['$', 'U$S', '€'] as const
+
+export const REASONS = {
+  ID_NOT_FOUND: 'ID_NOT_FOUND'
+} as const

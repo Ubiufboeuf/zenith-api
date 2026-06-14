@@ -1,7 +1,9 @@
 import { db } from '@/config/db'
-import type { CreateSaleBody, Sale } from '@/types/salesTypes'
+import type { CreateSaleBody, EditSaleBody, Sale } from '@/types/salesTypes'
 import { createCursor } from './cursorService'
 import type { Cursor } from '@/types/cursorTypes'
+import { HttpError } from '@/errors/HttpError'
+import { REASONS } from '@/lib/constants'
 
 export async function getSalesByCursor (cursor: Cursor | null, limit: number): Promise<{ list: Sale[], nextCursor: Cursor | null }> {
   const lastId = cursor?.lastId ?? null
@@ -112,4 +114,25 @@ export async function addNewSale (saleData: CreateSaleBody) {
     console.error('Error en la transacción de venta. Cambios revertidos.', error)
     return { success: false, err: error }
   }
+}
+
+export async function modifySale (sale: EditSaleBody) {
+  const existingSale = await getSaleById(sale.id)
+  if (!existingSale) throw new HttpError(`No se encontró la venta "${sale.id}"`, REASONS.ID_NOT_FOUND, 404)
+
+  const query = `
+    UPDATE sales
+    SET
+      date = ?,
+      total = ?,
+      total_discount = ?
+    WHERE id = ?
+  `
+
+  await db.execute(query, [
+    sale.date ?? existingSale.date,
+    sale.total ?? existingSale.total,
+    sale.total_discount ?? existingSale.total_discount,
+    sale.id
+  ])
 }
