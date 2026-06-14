@@ -70,7 +70,13 @@ export async function createSale (req: Request, res: Response) {
   return res.send(200).end()
 }
 
-export async function editSale (req: Request, res: Response) {
+export async function editSale (req: Request<{ id: string }>, res: Response) {
+  const { id } = req.params
+
+  if (!id) {
+    return response(res, 'Falta especificar el ID de la venta', { status: 400 })
+  }
+  
   const body = await getBody(req)
   if (!body || typeof body !== 'string') {
     return response(res, 'Cuerpo de la petición inválido', { status: 400 })
@@ -85,13 +91,9 @@ export async function editSale (req: Request, res: Response) {
     return response(res, msg, { status: 400 })
   }
 
-  if (!sale.id) {
-    return response(res, 'Falta especificar el ID de la venta', { status: 400 })
-  }
-
   // console.log(sale)
   try {
-    await modifySale(sale)
+    await modifySale(id, sale)
   } catch (err) {
     const error = getErrorsDetails(err)
     console.error(error)
@@ -103,5 +105,5 @@ export async function editSale (req: Request, res: Response) {
     return response(res, 'Hubo un error guardando la venta', { status: 500 })
   }
 
-  return response(res, `Venta ${sale.id} editada exitosamente`, { status: 200 })
+  return response(res, `Venta ${id} editada exitosamente`, { status: 200 })
 }

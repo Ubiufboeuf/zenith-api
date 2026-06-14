@@ -25,6 +25,8 @@ export const createSaleBodySchema = z.object({
   payments: z.array(createSalePaymentSchema).optional()
 })
 
-export const editSaleBodySchema = saleBodySchema.partial().extend({
-  id: z.string()
-})
+export const editSaleBodySchema = saleBodySchema
+  .omit({
+    id: true
+  })
+  .partial()

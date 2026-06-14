@@ -125,9 +125,9 @@ export async function addNewSale (saleData: CreateSaleBody) {
   }
 }
 
-export async function modifySale (sale: EditSaleBody) {
-  const existingSale = await getSaleById(sale.id)
-  if (!existingSale) throw new HttpError(`No se encontró la venta "${sale.id}"`, REASONS.ID_NOT_FOUND, 404)
+export async function modifySale (id: string, sale: EditSaleBody) {
+  const existingSale = await getSaleById(id)
+  if (!existingSale) throw new HttpError(`No se encontró la venta "${id}"`, REASONS.ID_NOT_FOUND, 404)
 
   const query = `
     UPDATE sales
@@ -142,6 +142,6 @@ export async function modifySale (sale: EditSaleBody) {
     sale.date ?? existingSale.date,
     sale.total ?? existingSale.total,
     sale.total_discount ?? existingSale.total_discount,
-    sale.id
+    id
   ])
 }
