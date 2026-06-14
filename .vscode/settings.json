@@ -2,6 +2,7 @@
   "conventionalCommits.scopes": [
     "endpoint",
     "dev",
-    "errors"
+    "errors",
+    "sales"
   ]
 }
