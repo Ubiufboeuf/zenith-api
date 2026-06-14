@@ -48,7 +48,10 @@ export async function addNewSale (saleData: CreateSaleBody) {
     id: saleId,
     date: saleData.date,
     total: saleData.total,
-    total_discount: saleData.total_discount
+    total_discount: saleData.total_discount,
+    currency: saleData.currency,
+    products: saleData.products,
+    payments: saleData.payments
   }
 
   const transaction = await db.transaction('write')
@@ -56,8 +59,14 @@ export async function addNewSale (saleData: CreateSaleBody) {
   try {
     // Agregar venta (SALES)
     await transaction.execute({
-      sql: 'INSERT INTO sales (id, date, total, total_discount) VALUES (?, ?, ?, ?)',
-      args: Object.values(sale)
+      sql: 'INSERT INTO sales (id, date, total, total_discount, currency) VALUES (?, ?, ?, ?, ?)',
+      args: [
+        sale.id,
+        sale.date,
+        sale.total,
+        sale.total_discount,
+        sale.currency
+      ]
     })
 
     // Batch de detalles de producto (SALE_DETAILS)
