@@ -3,6 +3,7 @@
     "endpoint",
     "dev",
     "errors",
-    "sales"
+    "sales",
+    "schemas"
   ]
 }
