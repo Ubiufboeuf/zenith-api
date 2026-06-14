@@ -1,6 +1,6 @@
 import { createCursor, cursorFromB64, cursorToB64 } from '@/services/cursorService'
 import { addNewSale, getSaleById, getSalesByCursor } from '@/services/salesService'
-import { getErrorsDetails } from '@/utils/errors'
+import { getErrorsDetails } from '@/errors'
 import { getBody } from '@/utils/request'
 import { response } from '@/utils/response'
 import { isValidCreateSaleBody } from '@/validations/salesValidations'
