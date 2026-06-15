@@ -4,6 +4,7 @@
     "dev",
     "errors",
     "sales",
-    "schemas"
+    "schemas",
+    "payments"
   ]
 }
