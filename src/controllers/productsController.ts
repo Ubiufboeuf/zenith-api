@@ -1,10 +1,33 @@
 import { createCursor, cursorFromB64, cursorToB64 } from '@/services/cursorService'
-import { getProductById, getProductsByCursor } from '@/services/productsService'
+import { getProductBy, getProductsByCursor } from '@/services/productsService'
 import { response } from '@/utils/response'
 import type { Request, Response } from 'express'
 
-export async function getProducts (req: Request, res: Response) {
+type GetProductsQueryParams = { barcode?: string, qrcode?: string, limit?: string, cursor?: string }
+
+export async function getProducts (req: Request<null, null, null, GetProductsQueryParams>, res: Response) {
   const { query } = req
+
+  const barcode = query.barcode
+  if (barcode) {
+    const product = await getProductBy('barcode', barcode)
+    if (!product) {
+      return response(res, 'No se encontró el producto', { status: 404 })
+    }
+    
+    return res.json(product)
+  }
+
+  const qrcode = query.qrcode
+  if (qrcode) {
+    const product = await getProductBy('qrcode', qrcode)
+    if (!product) {
+      return response(res, 'No se encontró el producto', { status: 404 })
+    }
+    
+    return res.json(product)
+  }
+
   const limit = Number(query.limit ?? 1)
   let cursorStr = query.cursor
 
@@ -34,7 +57,7 @@ export async function getProducts (req: Request, res: Response) {
 export async function getProduct (req: Request<{ id: string }>, res: Response) {
   const { id } = req.params
 
-  const product = await getProductById(id)
+  const product = await getProductBy('id', id)
   if (!product) {
     return response(res, 'No se encontró el producto', { status: 404 })
   }

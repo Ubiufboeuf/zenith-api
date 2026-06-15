@@ -5,6 +5,7 @@
     "errors",
     "sales",
     "schemas",
-    "payments"
+    "payments",
+    "products"
   ]
 }

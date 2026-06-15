@@ -1,6 +1,6 @@
 import { db } from '@/config/db'
 import type { Cursor } from '@/types/cursorTypes'
-import type { Product } from '@/types/productsTypes'
+import type { Product, ProductRow } from '@/types/productsTypes'
 import { createCursor } from './cursorService'
 import { isValidProduct } from '@/validations/productsValidations'
 
@@ -27,15 +27,27 @@ export async function getProductsByCursor (cursor: Cursor | null, limit: number)
   }
 }
 
-export async function getProductById (id: string): Promise<Product | undefined> {
-  const query = 'SELECT * FROM products WHERE id = ?'
+export async function getProductBy (by: 'id' | 'barcode' | 'qrcode', id: string): Promise<Product | undefined> {
+  const query = `SELECT * FROM products WHERE ${by} = ?`
   const result = await db.execute(query, [id])
 
-  if (!result?.rows.length) {
-    return
-  }
+  if (!result?.rows.length) return
   
-  const product = result.rows[0]
+  const p = result.rows[0] as unknown as ProductRow
+  if (!p) return
+
+  const product: Product = {
+    id: p.id!.toString(),
+    barcode: p.barcode!.toString(),
+    qrcode: p.qrcode!.toString(),
+    description: p.description!.toString(),
+    cost_price: Number(p.cost_price),
+    cost_currency: p.cost_currency,
+    sale_price: Number(p.sale_price),
+    sale_currency: p.sale_currency,
+    stock: Number(p.stock)
+  }
+
   if (!isValidProduct(product)) return
   
   console.log(product)
