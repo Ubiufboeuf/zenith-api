@@ -1,8 +1,9 @@
 import { db } from '@/config/db'
 import type { Cursor } from '@/types/cursorTypes'
-import type { Product, ProductRow } from '@/types/productsTypes'
+import type { CreateProductBody, Product, ProductRow } from '@/types/productsTypes'
 import { createCursor } from './cursorService'
 import { isValidProduct } from '@/validations/productsValidations'
+import { DEFAULT_CURRENCY } from '@/lib/constants'
 
 export async function getProductsByCursor (cursor: Cursor | null, limit: number): Promise<{ list: Product[], nextCursor: Cursor | null }> {
   const lastId = cursor?.lastId ?? null
@@ -53,4 +54,23 @@ export async function getProductBy (by: 'id' | 'barcode' | 'qrcode', id: string)
   console.log(product)
 
   return product
+}
+
+export async function addProduct (product: CreateProductBody) {
+  const productId = crypto.randomUUID()
+  const p = [
+    product.barcode ?? null,
+    product.qrcode ?? null,
+    product.description ?? '',
+    product.cost_price ?? 0,
+    product.cost_currency ?? DEFAULT_CURRENCY,
+    product.sale_price ?? 0,
+    product.sale_currency ?? DEFAULT_CURRENCY,
+    product.stock ?? 0
+  ]
+
+  await db.execute(`
+    INSERT INTO products (id, barcode, qrcode, description, cost_price, cost_currency, sale_price, sale_currency, stock)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `, [productId, ...p])
 }

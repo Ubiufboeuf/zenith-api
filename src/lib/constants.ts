@@ -5,6 +5,7 @@ export const {
 } = process.env
 
 export const CURRENCIES = ['UYU', 'USD', 'EUR'] as const // ISO 4217
+export const DEFAULT_CURRENCY: typeof CURRENCIES[number] = 'UYU'
 export const SALE_STATUS = ['CANCELLED', 'PENDING', 'COMPLETED'] as const
 export const PAYMET_STATUS = ['PAID', 'PARTIAL', 'OWED', 'REFUNDED', 'VOIDED'] as const
 

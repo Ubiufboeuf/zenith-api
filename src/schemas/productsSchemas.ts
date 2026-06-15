@@ -3,7 +3,7 @@ import z from 'zod'
 
 export const productSchema = z.object({
   id: z.string(),
-  barcode: z.string(),
+  barcode: z.string().nullable(),
   qrcode: z.string().nullable(),
   description: z.string(),
   cost_price: z.number(),
@@ -12,6 +12,12 @@ export const productSchema = z.object({
   sale_currency: z.enum(CURRENCIES),
   stock: z.number()
 })
+
+export const createProductSchema = productSchema.omit({
+  id: true
+})
+
+export const createProductBodySchema = createProductSchema.partial()
 
 export const createSaleProductSchema = z.object({
   product_id: z.string(),

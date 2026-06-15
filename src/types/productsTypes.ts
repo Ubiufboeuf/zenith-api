@@ -1,9 +1,10 @@
-import type { createSaleProductSchema, productSchema } from '@/schemas/productsSchemas'
+import type { createProductBodySchema, createProductSchema, createSaleProductSchema, productSchema } from '@/schemas/productsSchemas'
 import type z from 'zod'
 import type { Currency } from './paymentsTypes'
 
 export type Product = z.infer<typeof productSchema>
-
+export type CreateProduct = z.infer<typeof createProductSchema>
+export type CreateProductBody = z.infer<typeof createProductBodySchema>
 export type CreateSaleProduct = z.infer<typeof createSaleProductSchema>
 
 export interface ProductRow {
