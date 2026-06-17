@@ -1,4 +1,4 @@
-import { CURRENCIES } from '@/lib/constants'
+import { CURRENCIES } from '@/lib/constants/currencies'
 import z from 'zod'
 
 export const productSchema = z.object({

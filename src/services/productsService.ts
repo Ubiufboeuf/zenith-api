@@ -3,7 +3,7 @@ import type { Cursor } from '@/types/cursorTypes'
 import type { CreateProductBody, Product, ProductRow } from '@/types/productsTypes'
 import { createCursor } from './cursorService'
 import { isValidProduct } from '@/validations/productsValidations'
-import { DEFAULT_CURRENCY } from '@/lib/constants'
+import { DEFAULT_CURRENCY } from '@/lib/constants/currencies'
 
 export async function getProductsByCursor (cursor: Cursor | null, limit: number): Promise<{ list: Product[], nextCursor: Cursor | null }> {
   const lastId = cursor?.lastId ?? null

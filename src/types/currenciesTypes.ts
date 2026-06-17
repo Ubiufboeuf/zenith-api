@@ -1,4 +1,4 @@
-import type { CURRENCIES } from '@/lib/constants'
+import type { CURRENCIES } from '@/lib/constants/currencies'
 import type { createSalePaymentSchema } from '@/schemas/paymentsSchemas'
 import type z from 'zod'
 

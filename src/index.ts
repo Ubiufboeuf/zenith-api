@@ -1,7 +1,7 @@
 import express from 'express'
 import { connectToDB } from '@/config/db'
 import { getErrorsDetails } from '@/errors'
-import { PORT } from '@/lib/constants'
+import { PORT } from '@/lib/constants/env'
 import { ROUTES } from '@/lib/routes'
 import { productsRouter } from './routes/productsRouter'
 import { salesRouter } from './routes/salesRouter'

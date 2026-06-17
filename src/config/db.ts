@@ -1,5 +1,5 @@
 import { createClient, type Client } from '@libsql/client'
-import { TURSO_AUTH_TOKEN, TURSO_DATABASE_URL } from '@/lib/constants'
+import { TURSO_AUTH_TOKEN, TURSO_DATABASE_URL } from '@/lib/constants/env'
 
 export let db: Client
 

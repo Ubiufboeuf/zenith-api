@@ -1,4 +1,5 @@
-import { CURRENCIES, PAYMET_STATUS, SALE_STATUS } from '@/lib/constants'
+import { CURRENCIES } from '@/lib/constants/currencies'
+import { PAYMENT_STATUS, SALE_STATUS } from '@/lib/constants/sales'
 import z from 'zod'
 import { createSaleProductSchema } from './productsSchemas'
 import { createSalePaymentSchema } from './paymentsSchemas'
@@ -13,7 +14,7 @@ export const saleBodySchema = z.object({
   products: z.array(createSaleProductSchema),
   payments: z.array(createSalePaymentSchema).optional(),
   status: z.enum(SALE_STATUS),
-  payment_status: z.enum(PAYMET_STATUS),
+  payment_status: z.enum(PAYMENT_STATUS),
   client_id: z.string().optional(),
   user_id: z.string()
 })

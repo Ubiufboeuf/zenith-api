@@ -3,7 +3,7 @@ import type { CreateSaleBody, EditSaleBody, Sale } from '@/types/salesTypes'
 import { createCursor } from './cursorService'
 import type { Cursor } from '@/types/cursorTypes'
 import { HttpError } from '@/errors/HttpError'
-import { REASONS } from '@/lib/constants'
+import { REASONS } from '@/lib/constants/errors'
 
 export async function getSalesByCursor (cursor: Cursor | null, limit: number): Promise<{ list: Sale[], nextCursor: Cursor | null }> {
   const lastId = cursor?.lastId ?? null

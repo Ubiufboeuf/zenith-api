@@ -1,6 +1,6 @@
 import type { createProductBodySchema, createProductSchema, createSaleProductSchema, productSchema } from '@/schemas/productsSchemas'
 import type z from 'zod'
-import type { Currency } from './paymentsTypes'
+import type { Currency } from './currenciesTypes'
 
 export type Product = z.infer<typeof productSchema>
 export type CreateProduct = z.infer<typeof createProductSchema>
