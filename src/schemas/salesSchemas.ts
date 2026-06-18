@@ -1,25 +1,39 @@
 import { CURRENCIES } from '@/lib/constants/currencies'
-import { PAYMENT_STATUS, SALE_STATUS } from '@/lib/constants/sales'
+import { DOCUMENT_TYPES, PAYMENT_STATUS, SALE_STATUS, SALE_TYPES } from '@/lib/constants/sales'
 import z from 'zod'
 import { createSaleProductSchema } from './productsSchemas'
 import { createSalePaymentSchema } from './paymentsSchemas'
 
-export const saleBodySchema = z.object({
+export const saleDetailsSchema = z.object({
+  id: z.string(),
+  sale_id: z.string(),
+  product_id: z.string(),
+  quantity: z.number(),
+  unir_price_at_moment: z.int(),
+  currency: z.enum(CURRENCIES),
+  discount: z.int()
+})
+
+export const saleSchema = z.object({
   id: z.string(),
   created_at: z.string(),
   last_modified: z.string(),
-  total: z.number(),
-  total_discount: z.number(),
+  total: z.int(),
+  total_discount: z.int(),
+  general_discount: z.int(),
   currency: z.enum(CURRENCIES),
-  products: z.array(createSaleProductSchema),
-  payments: z.array(createSalePaymentSchema).optional(),
   status: z.enum(SALE_STATUS),
   payment_status: z.enum(PAYMENT_STATUS),
+  document_type: z.enum(DOCUMENT_TYPES),
+  sale_type: z.enum(SALE_TYPES),
   client_id: z.string().optional(),
-  user_id: z.string()
+  user_id: z.string(),
+  products: z.array(createSaleProductSchema),
+  payments: z.array(createSalePaymentSchema).optional(),
+  details: z.array(saleDetailsSchema)
 })
 
-export const createSaleBodySchema = saleBodySchema.omit({
+export const createSaleBodySchema = saleSchema.omit({
   id: true,
   last_modified: true
 })

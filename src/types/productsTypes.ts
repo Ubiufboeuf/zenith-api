@@ -1,8 +1,11 @@
-import type { createProductBodySchema, createProductSchema, createSaleProductSchema, productSchema } from '@/schemas/productsSchemas'
+import type { createProductBodySchema, createProductSchema, createSaleProductSchema, productCodeSchema, productSchema } from '@/schemas/productsSchemas'
 import type z from 'zod'
 import type { Currency } from './currenciesTypes'
+import type { PRODUCT_CODE_KINDS } from '@/lib/constants/products'
 
 export type Product = z.infer<typeof productSchema>
+export type ProductCode = z.infer<typeof productCodeSchema>
+
 export type CreateProduct = z.infer<typeof createProductSchema>
 export type CreateProductBody = z.infer<typeof createProductBodySchema>
 export type CreateSaleProduct = z.infer<typeof createSaleProductSchema>
@@ -28,3 +31,5 @@ export interface ProductRow {
   sale_currency: Currency
   stock: number
 }
+
+export type ProductCodeKind = typeof PRODUCT_CODE_KINDS[number]
