@@ -1,4 +1,4 @@
-import { CURRENCIES, DEFAULT_CURRENCY } from '@/lib/constants/currencies'
+import { CURRENCIES } from '@/lib/constants/currencies'
 import { PRODUCT_CODE_KINDS } from '@/lib/constants/products'
 import z from 'zod'
 
@@ -18,7 +18,7 @@ export const productSchema = z.object({
   sale_price: z.int(),
   sale_currency: z.enum(CURRENCIES),
   stock: z.number(),
-  codes: z.array(productCodeSchema)
+  codes: z.array(productCodeSchema).default([])
 })
 
 export const createProductSchema = productSchema.omit({

@@ -59,8 +59,6 @@ export async function getProductBy (by: 'id' | 'barcode' | 'qrcode', id: string)
 export async function addProduct (product: CreateProductBody) {
   const productId = crypto.randomUUID()
   const p = [
-    product.barcode ?? null,
-    product.qrcode ?? null,
     product.description ?? '',
     product.cost_price ?? 0,
     product.cost_currency ?? DEFAULT_CURRENCY,
@@ -70,7 +68,7 @@ export async function addProduct (product: CreateProductBody) {
   ]
 
   await db.execute(`
-    INSERT INTO products (id, barcode, qrcode, description, cost_price, cost_currency, sale_price, sale_currency, stock)
+    INSERT INTO products (id, description, cost_price, cost_currency, sale_price, sale_currency, stock)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
   `, [productId, ...p])
 }
