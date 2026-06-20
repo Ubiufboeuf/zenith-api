@@ -2,9 +2,6 @@ import express from 'express'
 import { connectToDB } from '@/config/db'
 import { getErrorsDetails } from '@/errors'
 import { PORT } from '@/lib/constants/env'
-import { ROUTES } from '@/lib/routes'
-import { productsRouter } from './routes/productsRouter'
-import { salesRouter } from './routes/salesRouter'
 
 async function main () {
   try {
@@ -18,10 +15,7 @@ async function main () {
   const app = express()
   app.disable('x-powered-by')
 
-  app.use(ROUTES.PRODUCTS, productsRouter)
-  app.use(ROUTES.SALES, salesRouter)
-
-  app.use((req, res) => res.status(404).end())
+  app.use((_, res) => res.status(404).end())
 
   app.listen(PORT, () => console.log(`Servidor levantado en el puerto :${PORT}`))
 }
