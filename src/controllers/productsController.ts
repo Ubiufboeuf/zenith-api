@@ -6,24 +6,14 @@ import { response } from '@/utils/response'
 import { isValidCreateProductBody } from '@/validations/productsValidations'
 import type { Request, Response } from 'express'
 
-type GetProductsQueryParams = { barcode?: string, qrcode?: string, limit?: string, cursor?: string }
+type GetProductsQueryParams = { code?: string, limit?: string, cursor?: string }
 
 export async function getProducts (req: Request<null, null, null, GetProductsQueryParams>, res: Response) {
   const { query } = req
 
-  const barcode = query.barcode
-  if (barcode) {
-    const product = await getProductBy('barcode', barcode)
-    if (!product) {
-      return response(res, 'No se encontró el producto', { status: 404 })
-    }
-    
-    return res.json(product)
-  }
-
-  const qrcode = query.qrcode
-  if (qrcode) {
-    const product = await getProductBy('qrcode', qrcode)
+  const code = query.code
+  if (code) {
+    const product = await getProductBy('code', code)
     if (!product) {
       return response(res, 'No se encontró el producto', { status: 404 })
     }
