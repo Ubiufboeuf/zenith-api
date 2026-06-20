@@ -1,6 +1,7 @@
 import type { Product } from '@/types/productsTypes'
 import { api } from '../helpers'
 import { isValidProduct } from '@/validations/productsValidations'
+import { productSchema } from '@/schemas/productsSchemas'
 
 export async function getProducts ({ limit = 1, cursor = null }: { limit?: number, cursor?: string | null } = {}) {
   const data = await api(`/products?limit=${limit}${cursor ? `&cursor=${cursor}` : ''}`)
@@ -29,6 +30,12 @@ export async function getProducts ({ limit = 1, cursor = null }: { limit?: numbe
 
 export async function getProduct (id: string) {
   const data = await api(`/products/${id}`)
-  console.log(id)
-  
+  const productValidation = productSchema.safeParse(data)
+  if (productValidation.success) return productValidation.data
+}
+
+export async function getProductByCode (code: string) {
+  const data = await api(`/products?code=${code}`)
+  const productValidation = productSchema.safeParse(data)
+  if (productValidation.success) return productValidation.data
 }

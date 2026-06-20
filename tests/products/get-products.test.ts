@@ -1,7 +1,25 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
-import { getProduct, getProducts } from '../helpers/products'
+import { getProduct, getProductByCode, getProducts } from '../helpers/products'
+import type { Product } from '@/types/productsTypes'
 
 describe('GET /products', () => {
+  let p: Product
+  
+  beforeAll(async () => {
+    const { products } = await getProducts()
+
+    if (!products.length) {
+      throw new Error('No se pudieron conseguir los productos para los test')
+    }
+
+    const product = products[0]
+    if (!product) {
+      throw new Error('No se pudo conseguir un producto para los tests')
+    }
+
+    p = product
+  })
+
   test('debería conseguir el primer producto', async () => {
     const { products } = await getProducts()
     expect(products.length).toBe(1)
@@ -21,9 +39,39 @@ describe('GET /products', () => {
 
     expect(secondProd).toEqual(products[1])
   })
+
+
+  test('debería conseguir un producto específico por uno de sus códigos', async () => {
+    const code = p?.codes[0]?.code
+
+    expect(code).toBeDefined()
+    if (!code) return
+
+    const product = await getProductByCode(code)
+    const productCode = product?.codes[0]?.code
+    
+    expect(productCode).toBeDefined()
+    expect(productCode).toBe(code)
+  })
+
+  test('todos los códigos de un producto deben coincidir en su id de producto', async () => {
+    const code = p?.codes[0]?.code
+
+    expect(code).toBeDefined()
+    if (!code) return
+
+    const product = await getProductByCode(code)
+    const codes = product?.codes
+
+    expect(codes).toBeArray()
+    if (codes?.length === 0) return
+
+    const equalIds = codes?.every((c) => c.product_id === p.id)
+    expect(equalIds).toBeTrue()
+  })
 })
 
-describe('GET /product/:id', () => {
+describe('GET /products/:id', () => {
   let id: string
   
   beforeAll(async () => {
@@ -41,8 +89,8 @@ describe('GET /product/:id', () => {
     id = product.id
   })
 
-  test('debería conseguir un producto específico', async () => {
+  test('debería conseguir un producto específico por su id', async () => {
     const product = await getProduct(id)
-    console.log(product)
+    expect(product?.id).toBe(id)
   })
 })
