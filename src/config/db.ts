@@ -29,7 +29,22 @@ export async function connectToDB () {
 async function checkIfConnectedToDB (db: Client) {
   try {
     await db.execute('PRAGMA foreign_keys = ON;')
-  } catch {
-    throw new Error('No se pudo conectar a la base de datos')
+
+    if (DB === 'local') {
+      // Cambiado a sqlite_master para que sea compatible con el archivo local
+      const result = await db.execute(
+        'SELECT name FROM sqlite_master WHERE type=\'table\' AND name=\'products\';'
+      )
+      
+      if (result.rows.length === 0) {
+        throw new Error('La base de datos local existe, pero no tiene el esquema cargado. Ejecutá el script de inicialización primero.', {
+          cause: 'SCHEMA_NOT_FOUND'
+        })
+      }
+    }
+  } catch (error) {
+    if (error instanceof Error && error.cause === 'SCHEMA_NOT_FOUND') throw error
+    
+    throw new Error('No se pudo conectar a la base de datos', { cause: error })
   }
 }
