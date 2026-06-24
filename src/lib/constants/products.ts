@@ -1,0 +1,2 @@
+export const PRODUCT_VALID_CODES = ['BARCODE_INTERNAL', 'BARCODE_PROVIDER', 'QR_INTERNAL'] as const
+export const PRODUCT_EVENTS = ['CREATED_AT'] as const
