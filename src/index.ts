@@ -2,6 +2,8 @@ import express from 'express'
 import { connectToDB } from '@/config/db'
 import { getErrorsDetails } from '@/errors'
 import { PORT } from '@/lib/constants/env'
+import { ROUTES } from './lib/routes'
+import { productsRouter } from './routers/productsRouter'
 
 async function main () {
   try {
@@ -14,6 +16,8 @@ async function main () {
 
   const app = express()
   app.disable('x-powered-by')
+
+  app.use(ROUTES.PRODUCTS, productsRouter)
 
   app.use((_, res) => res.status(404).end())
 
