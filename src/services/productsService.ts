@@ -59,18 +59,13 @@ export async function getProductsByCursor (cursor: Cursor | null, limit: number)
   }
 }
 
-export async function getProductBy (by: 'id' | 'code', v: string): Promise<Product | undefined> {
-  const productQuery = by === 'id'
-    ? 'SELECT * FROM products WHERE id = ? LIMIT 1'
-    : 'SELECT * FROM products WHERE id = (SELECT product_id FROM product_codes WHERE code = ? LIMIT 1) LIMIT 1'
-
-  const codesQuery = by === 'id'
-    ? 'SELECT * FROM product_codes WHERE product_id = ?'
-    : 'SELECT * FROM product_codes WHERE product_id = (SELECT product_id FROM product_codes WHERE code = ? LIMIT 1)'
+export async function getProductById (id: string): Promise<Product | undefined> {
+  const productQuery = 'SELECT * FROM products WHERE id = ? LIMIT 1'
+  const codesQuery = 'SELECT * FROM product_codes WHERE product_id = ?'
 
   const [productResult, codesResult] = await db.batch([
-    { sql: productQuery, args: [v] },
-    { sql: codesQuery, args: [v] }
+    { sql: productQuery, args: [id] },
+    { sql: codesQuery, args: [id] }
   ])
 
   if (!productResult?.rows.length || !codesResult?.rows.length) return
@@ -81,6 +76,36 @@ export async function getProductBy (by: 'id' | 'code', v: string): Promise<Produ
   const product = formProduct(productRow, codeRows)
 
   return product
+}
+
+export async function getProductsByCode (code: string): Promise<Product[] | undefined> {
+  const productsQuery = `
+    SELECT p.* FROM products p
+    INNER JOIN product_codes pc ON p.id = pc.product_id
+    WHERE pc.code = ?
+  `
+  const codesQuery = 'SELECT * FROM product_codes WHERE product_id = (SELECT product_id FROM product_codes WHERE code = ?)'
+
+  const [productsResult, codesResult] = await db.batch([
+    { sql: productsQuery, args: [code] },
+    { sql: codesQuery, args: [code] }
+  ])
+
+  if (!productsResult?.rows.length || !codesResult?.rows.length) return
+
+  const productsRow = productsResult.rows
+  console.log(productsRow)
+  const codeRows = codesResult.rows
+
+  const products: Product[] = []
+
+  for (const row of productsRow) {
+    const product = formProduct(row, codeRows)
+    if (!product) continue
+    products.push(product)
+  }
+
+  return products
 }
 
 export function formProduct (row: Row | undefined, codeRows: Row[] = []): Product | undefined {

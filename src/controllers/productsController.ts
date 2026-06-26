@@ -1,5 +1,5 @@
 import { createCursor, cursorFromB64, cursorToB64 } from '@/services/cursorService'
-import { getProductBy, getProductsByCursor } from '@/services/productsService'
+import { getProductsByCode, getProductsByCursor } from '@/services/productsService'
 import { failiure, success } from '@/utils/response'
 import type { Request, Response } from 'express'
 
@@ -14,9 +14,9 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
 
   const code = query.code
   if (code) {
-    const product = await getProductBy('code', code)
-    if (product) {
-      return success(res, { product })
+    const products = await getProductsByCode(code)
+    if (products) {
+      return success(res, { products })
     }
 
     return failiure(res, 'No se encontró el producto', { status: 404 })
