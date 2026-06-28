@@ -24,6 +24,10 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
 
   const { limit: ql = 1, cursor: qc } = query
   const limit = Number(ql)
+  if (typeof limit !== 'number' || Number.isNaN(limit) || !Number.isFinite(limit) || !Number.isInteger(limit) || limit <= 0) {
+    return failiure(res, 'El límite especificado es inválido', { status: 400 })
+  }
+  
   const cursorStr = !qc || qc === 'undefined' || qc === 'null'
     ? undefined
     : qc
@@ -37,10 +41,6 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
   }
 
   const { list: products, nextCursor } = await getProductsByCursor(cursor, limit)
-
-  if (!products.length) {
-    return failiure(res, 'No se encontraron los productos solicitados', { status: 404 })
-  }
 
   success(res, {
     products,
