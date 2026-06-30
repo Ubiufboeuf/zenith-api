@@ -30,7 +30,7 @@ export const ProductEventsRowSchema = z.object({
   id: z.uuid({ version: 'v4' }).default(() => crypto.randomUUID()),
   product_id: z.uuid({ version: 'v4' }),
   event_type: z.enum(PRODUCT_EVENTS),
-  previous_vale: z.string(),
+  previous_value: z.string(),
   new_value: z.string(),
   created_at: z.iso.datetime()
 })
