@@ -84,7 +84,7 @@ export async function getProductsByCode (code: string): Promise<Product[] | unde
     INNER JOIN product_codes pc ON p.id = pc.product_id
     WHERE pc.code = ?
   `
-  const codesQuery = 'SELECT * FROM product_codes WHERE product_id = (SELECT product_id FROM product_codes WHERE code = ?)'
+  const codesQuery = 'SELECT * FROM product_codes WHERE product_id IN (SELECT product_id FROM product_codes WHERE code = ?)'
 
   const [productsResult, codesResult] = await db.batch([
     { sql: productsQuery, args: [code] },
@@ -118,6 +118,7 @@ export function formProduct (row: Row | undefined, codeRows: Row[] = []): Produc
   
   for (const r of codeRows) {
     const codeParsed = ProductCodeSchema.safeParse(r)
+    if (codeParsed.data?.product_id !== productParsed.data.id) continue
 
     if (codeParsed.success) {
       codes.push(codeParsed.data)
