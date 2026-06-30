@@ -10,6 +10,7 @@ export const ProductsRowSchema = z.object({
   subtitle: z.string().default(''),
   provider: z.string().default(''),
   brand: z.string().default(''),
+  category: z.string().default(''),
   cost_price: z.int(),
   cost_currency: z.enum(CURRENCIES),
   sale_price: z.int(),
