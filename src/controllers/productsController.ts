@@ -56,7 +56,7 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
     : qc
 
   const cursor = cursorStr
-    ? cursorFromB64(JSON.stringify(cursorStr))
+    ? cursorFromB64(cursorStr)
     : createCursor()
 
   if (!cursor) {
