@@ -14,6 +14,10 @@ export const ProductSchema = ProductsRowSchema.extend({
   codes: z.array(ProductCodeSchema)
 })
 
+export const ProductWithEventsSchema = ProductsRowSchema.extend({
+  events: z.array(ProductEventsRowSchema)
+})
+
 export const ProductFullSchema = ProductSchema.extend({
   events: z.array(ProductEventsRowSchema)
 })

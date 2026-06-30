@@ -1,10 +1,12 @@
 import { createCursor, cursorFromB64, cursorToB64 } from '@/services/cursorService'
-import { getProductById, getProductsByCode, getProductsByCursor } from '@/services/productsService'
+import { getProductById, getProductsByCode, getProductsByCursor, getProductsSince } from '@/services/productsService'
 import { failiure, success } from '@/utils/response'
+import { validateTimestamp } from '@/validations/timeValidations'
 import type { Request, Response } from 'express'
 
 type GetProductsRequest = Request<null, null, null, {
   code?: string
+  since?: string
   limit?: string
   cursor?: string
 }>
@@ -12,6 +14,9 @@ type GetProductsRequest = Request<null, null, null, {
 export async function getProducts (req: GetProductsRequest, res: Response) {
   const { query } = req
 
+  // - Query Params -
+
+  // ?code=[code]
   const code = query.code
   if (code) {
     const products = await getProductsByCode(code)
@@ -22,6 +27,24 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
     return failiure(res, 'No se encontró el producto', { status: 404 })
   }
 
+  // ?since=[timesamp]
+  const since = query.since
+  if (since) {
+    const validation = validateTimestamp(since)
+    if (!validation.success) {
+      return failiure(res, 'La fecha indicada no es válida', { status: 400 })
+    }
+
+    const products = await getProductsSince(since)
+    if (products) {
+      return success(res, { products })
+    }
+    
+    return failiure(res, 'No se pudieron conseguir los productos desde esa fecha hasta ahora', { status: 500 })
+  }
+
+  // - Products -
+  
   const { limit: ql = 1, cursor: qc } = query
   const limit = Number(ql)
   if (typeof limit !== 'number' || Number.isNaN(limit) || !Number.isFinite(limit) || !Number.isInteger(limit) || limit <= 0) {
