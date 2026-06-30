@@ -1,6 +1,6 @@
 import { createCursor, cursorFromB64, cursorToB64 } from '@/services/cursorService'
 import { getProductById, getProductsByCode, getProductsByCursor, getProductsSince } from '@/services/productsService'
-import { failiure, success } from '@/utils/response'
+import { failure, success } from '@/utils/response'
 import { validateTimestamp } from '@/validations/timeValidations'
 import type { Request, Response } from 'express'
 
@@ -24,7 +24,7 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
       return success(res, { products })
     }
 
-    return failiure(res, 'No se encontró el producto', { status: 404 })
+    return failure(res, 'No se encontró el producto', { status: 404 })
   }
 
   // ?since=[timesamp]
@@ -32,7 +32,7 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
   if (since) {
     const validation = validateTimestamp(since)
     if (!validation.success) {
-      return failiure(res, 'La fecha indicada no es válida', { status: 400 })
+      return failure(res, 'La fecha indicada no es válida', { status: 400 })
     }
 
     const products = await getProductsSince(since)
@@ -40,7 +40,7 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
       return success(res, { products })
     }
     
-    return failiure(res, 'No se pudieron conseguir los productos desde esa fecha hasta ahora', { status: 500 })
+    return failure(res, 'No se pudieron conseguir los productos desde esa fecha hasta ahora', { status: 500 })
   }
 
   // - Products -
@@ -48,7 +48,7 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
   const { limit: ql = 1, cursor: qc } = query
   const limit = Number(ql)
   if (typeof limit !== 'number' || Number.isNaN(limit) || !Number.isFinite(limit) || !Number.isInteger(limit) || limit <= 0) {
-    return failiure(res, 'El límite especificado es inválido', { status: 400 })
+    return failure(res, 'El límite especificado es inválido', { status: 400 })
   }
   
   const cursorStr = !qc || qc === 'undefined' || qc === 'null'
@@ -60,7 +60,7 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
     : createCursor()
 
   if (!cursor) {
-    return failiure(res, 'No se pudo crear un nuevo cursor', { status: 500 })
+    return failure(res, 'No se pudo crear un nuevo cursor', { status: 500 })
   }
 
   const { list: products, nextCursor } = await getProductsByCursor(cursor, limit)
@@ -76,7 +76,7 @@ export async function getProduct (req: Request<{ id: string }>, res: Response) {
 
   const product = await getProductById(id)
   if (!product) {
-    return failiure(res, 'No se encontró el producto', { status: 404 })
+    return failure(res, 'No se encontró el producto', { status: 404 })
   }
   
   success(res, { product })

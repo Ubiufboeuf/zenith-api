@@ -19,7 +19,7 @@ export function success (res: Response, data: object) {
   })
 }
 
-export function failiure (res: Response, message: string, options?: Partial<ResponseOptions>) {
+export function failure (res: Response, message: string, options?: Partial<ResponseOptions>) {
   const status = options?.status ?? 200
   res.status(status).json({
     success: false,
