@@ -1,61 +1,106 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/config/db'
-import { ProductEventsRowSchema, ProductsRowSchema } from '@/schemas/db'
-import { ProductCodeSchema } from '@/schemas/productsSchemas'
-import type { Cursor } from '@/types/cursorTypes'
-import type { Product, ProductCode, ProductEvents, ProductWithEvents } from '@/types/productsTypes'
-import type { Row } from '@libsql/client'
+import type { Product, ProductCode, ProductsServiceProps, ProductsServiceResult } from '@/types/productsTypes'
+import type { InArgs, Row } from '@libsql/client'
 import { createCursor } from './cursorService'
+import { ProductsRowSchema } from '@/schemas/db'
+import { ProductCodeSchema } from '@/schemas/productsSchemas'
 
-export async function getProductsByCursor (cursor: Cursor | null, limit: number): Promise<{ list: Product[], nextCursor: Cursor | null }> {
-  const lastId = cursor?.lastId ?? null
+export async function getProductsService ({ cursor, limit, code, since }: ProductsServiceProps): Promise<ProductsServiceResult> {
+  if (!code) {
+    const { products, nextCursor } = await getProducts({ cursor, limit, since })
 
-  const result = await db.execute(
-    lastId
-      ? 'SELECT * FROM products WHERE id > ? ORDER BY id ASC LIMIT ?'
-      : 'SELECT * FROM products ORDER BY id ASC LIMIT ?',
-    lastId ? [lastId, limit + 1] : [limit + 1]
-  )
-
-  const productRows = result.rows
-  const hasMore = productRows.length > limit
-  const visibleRows = hasMore ? productRows.slice(0, limit) : productRows
-
-  if (visibleRows.length === 0) {
-    return { list: [], nextCursor: null }
+    return {
+      products,
+      nextCursor
+    }
   }
 
-  const productIds = visibleRows.map((row) => row.id as string)
+  return {
+    products: [],
+    nextCursor: null
+  }
+}
 
-  const placeholders = productIds.map(() => '?').join(',')
+function getProductsStatementParams ({ cursor, limit, since }: ProductsServiceProps): [string, InArgs] {
+  const lastId = cursor?.lastId ?? null
   
+  if (lastId && since) {
+    return [`
+      SELECT * FROM products p
+      INNER JOIN product_events pe ON p.id = pe.product_id
+      WHERE p.id > ?
+      AND pe.created_at > ?
+      ORDER BY p.id ASC LIMIT ?
+    `, [lastId, since, limit]]
+  }
+
+  if (since) {
+    return [`
+      SELECT * FROM products p
+      INNER JOIN product_events pe ON p.id = pe.product_id
+      WHERE pe.created_at > ?
+      ORDER BY p.id ASC LIMIT ?
+    `, [since, limit]]
+  }
+
+  if (lastId) {
+    return [`
+      SELECT * FROM products p
+      WHERE p.id > ?
+      ORDER BY p.id ASC LIMIT ?
+    `, [lastId, limit]]
+  }
+
+  return [`
+    SELECT * FROM products p
+    ORDER BY p.id ASC LIMIT ?
+  `, [limit]]
+}
+
+export async function getProducts ({ cursor, limit, since }: ProductsServiceProps): Promise<ProductsServiceResult> {
+  const [query, args] = getProductsStatementParams({ cursor, limit: limit + 1, since })
+  const productsResult = await db.execute(query, args)
+
+  const { rows } = productsResult
+  const hasMore = rows.length > limit
+  const visibleRows = hasMore ? rows.slice(0, limit) : rows
+
+  if (visibleRows.length === 0) {
+    return { nextCursor: null, products: [] }
+  }
+  
+  const ids = visibleRows.map((row) => row.id as string)
+  const placeholders = ids.map(() => '?').join(', ')
   const codesResult = await db.execute(
     `SELECT * FROM product_codes WHERE product_id IN (${placeholders})`,
-    productIds
+    ids
   )
-  const allCodeRows = codesResult.rows
+  const codeRows = codesResult.rows
 
-  const codesByProductId = allCodeRows.reduce((acc, codeRow) => {
+  const codesByProductId = codeRows.reduce((acc, codeRow) => {
     const prodId = codeRow.product_id as string
     if (!acc[prodId]) acc[prodId] = []
     acc[prodId].push(codeRow)
     return acc
   }, {} as Record<string, any[]>)
 
-  const list: Product[] = []
+  const products: Product[] = []
   for (const row of visibleRows) {
     const associatedCodes = codesByProductId[row.id as string] || []
-    const product = formProduct('code', row, associatedCodes)
+    const product = formProductWithCodes(row, associatedCodes)
     if (product) {
-      list.push(product)
+      products.push(product)
     }
   }
-
+  
+  const nextCursor = hasMore
+    ? createCursor(products.at(-1)?.id)
+    : null
+  
   return {
-    list,
-    nextCursor: hasMore
-      ? createCursor(list.at(-1)?.id)
-      : null
+    products,
+    nextCursor
   }
 }
 
@@ -78,102 +123,23 @@ export async function getProductById (id: string): Promise<Product | undefined> 
   return product
 }
 
-export async function getProductsByCode (code: string): Promise<Product[] | undefined> {
-  const productsQuery = `
-    SELECT p.* FROM products p
-    INNER JOIN product_codes pc ON p.id = pc.product_id
-    WHERE pc.code = ?
-  `
-  const codesQuery = 'SELECT * FROM product_codes WHERE product_id IN (SELECT product_id FROM product_codes WHERE code = ?)'
+function formProductWithCodes (row: Row, rows: Row[]) {
+  const productValidation = ProductsRowSchema.safeParse(row)
+  if (!productValidation.success) return
 
-  const [productsResult, codesResult] = await db.batch([
-    { sql: productsQuery, args: [code] },
-    { sql: codesQuery, args: [code] }
-  ])
+  const product = productValidation.data
 
-  if (!productsResult?.rows.length || !codesResult?.rows.length) return
-
-  const productsRow = productsResult.rows
-  console.log(productsRow)
-  const codeRows = codesResult.rows
-
-  const products: Product[] = []
-
-  for (const row of productsRow) {
-    const product = formProduct('code', row, codeRows)
-    if (!product) continue
-    products.push(product)
-  }
-
-  return products
-}
-
-export async function getProductsSince (since: string): Promise<ProductWithEvents[] | undefined> {
-  const productsQuery = `
-    SELECT * FROM products 
-    WHERE id IN (
-      SELECT DISTINCT product_id 
-      FROM product_events 
-      WHERE created_at >= ?
-    );
-  `
-
-  const eventsQuery = `
-    SELECT *
-    FROM product_events
-    WHERE created_at >= ?
-  `
-
-  const [productsResult, eventsResult] = await db.batch([
-    { sql: productsQuery, args: [since] },
-    { sql: eventsQuery, args: [since] }
-  ])
-
-  if (!productsResult?.rows.length || !eventsResult?.rows.length) return []
-
-  const productsRow = productsResult.rows
-  const eventRows = eventsResult.rows
-
-  const products: ProductWithEvents[] = []
-
-  for (const row of productsRow) {
-    const product = formProduct('event', row, eventRows)
-    if (!product) continue
-    products.push(product)
-  }
-
-  return products
-}
-
-export function formProduct(type: 'code', row: Row | undefined, rows?: Row[]): Product | undefined
-export function formProduct(type: 'event', row: Row | undefined, rows?: Row[]): ProductWithEvents | undefined
-
-export function formProduct (type: 'code' | 'event', row: Row | undefined, rows: Row[] = []): Product | ProductWithEvents | undefined {
-  if (!row) return
+  const codes: ProductCode[] = []
   
-  const productParsed = ProductsRowSchema.safeParse(row)
-  if (!productParsed.success) return
+  for (const code of rows) {
+    const codeValidation = ProductCodeSchema.safeParse(code)
+    if (!codeValidation.success || codeValidation.data.product_id !== product.id) continue
 
-  const schema = type === 'code' ? ProductCodeSchema : ProductEventsRowSchema
-  const extra = []
-
-  for (const r of rows) {
-    const parsed = schema.safeParse(r)
-    if (!parsed.success) continue
-    if (parsed.data.product_id !== productParsed.data.id) continue
-
-    extra.push(parsed.data)
-  }
-
-  if (type === 'code') {
-    return {
-      ...productParsed.data,
-      codes: extra as ProductCode[]
-    }
+    codes.push(codeValidation.data)
   }
 
   return {
-    ...productParsed.data,
-    events: extra as ProductEvents[]
+    ...product,
+    codes
   }
 }

@@ -1,4 +1,22 @@
 import type { Cursor } from '@/types/cursorTypes'
+import { validateLimit } from '@/validations/paginationValidations'
+import type { Request } from 'express'
+
+export type PaginationRequest = Request<null, null, null, {
+  limit?: string
+  cursor?: string
+  [key: string]: string | undefined
+}>
+
+type Pagination = {
+  success: false
+  error: string
+  status: number
+} | {
+  success: true
+  limit: number
+  cursor: Cursor | null
+}
 
 export function createCursor (lastId?: string | null): Cursor {
   return {
@@ -24,5 +42,29 @@ export function cursorFromB64 (cursor: string): Cursor | null {
     }
   } catch {
     return null
+  }
+}
+
+export function createPagination (req: PaginationRequest): Pagination {
+  const limitValidation = validateLimit(req.query.limit ?? 1)
+  if (!limitValidation.success) {
+    return {
+      success: false,
+      error: 'El límite especificado es inválido',
+      status: 400
+    }
+  }
+
+  const { cursor: prevCursor } = req.query
+  const limit = limitValidation.data
+
+  const cursor = prevCursor
+    ? cursorFromB64(prevCursor)
+    : createCursor()
+
+  return {
+    success: true,
+    limit,
+    cursor
   }
 }
