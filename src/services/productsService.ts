@@ -139,20 +139,14 @@ export async function getCodes (productsIds: string[]): Promise<Map<string, Prod
 }
 
 export async function getProductById (id: string): Promise<Product | undefined> {
-  const productQuery = 'SELECT * FROM products WHERE id = ? LIMIT 1'
-  const codesQuery = 'SELECT * FROM product_codes WHERE product_id = ?'
+  const query = 'SELECT * FROM products WHERE id = ?'
+  const result = await db.execute(query, [id])
+  const row = result.rows[0]
 
-  const [productResult, codesResult] = await db.batch([
-    { sql: productQuery, args: [id] },
-    { sql: codesQuery, args: [id] }
-  ])
-
-  if (!productResult?.rows.length || !codesResult?.rows.length) return
-
-  const productRow = productResult.rows[0]
-  const codeRows = codesResult.rows
-
-  const product = formProduct('code', productRow, codeRows)
+  if (!row) return
+  
+  const codes = await getCodes([id])
+  const product = formProductWithCodes(row, codes.get(id) || [])
 
   return product
 }
