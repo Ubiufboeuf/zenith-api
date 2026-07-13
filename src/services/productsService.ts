@@ -151,6 +151,17 @@ export async function getProductById (id: string): Promise<Product | undefined> 
   return product
 }
 
+export async function getProductsResolvingCodes (codes: string[]): Promise<Product[]> {
+  const listOfProducts: Product[] = []
+
+  for (const code of codes) {
+    const products = await getProductsByCode(code)
+    listOfProducts.push(...products)
+  }
+  
+  return listOfProducts
+}
+
 function formProductWithCodes (row: Row, rows: (Row | ProductCode)[]) {
   const productValidation = ProductsRowSchema.safeParse(row)
   if (!productValidation.success) return

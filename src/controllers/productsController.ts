@@ -1,5 +1,6 @@
 import { createPagination, cursorToB64 } from '@/services/cursorService'
-import { getProductById, getProductsService } from '@/services/productsService'
+import { getProductById, getProductsResolvingCodes, getProductsService } from '@/services/productsService'
+import { getBody } from '@/utils/request'
 import { failure, success } from '@/utils/response'
 import type { Request, Response } from 'express'
 
@@ -44,4 +45,17 @@ export async function getProduct (req: Request<{ id: string }>, res: Response) {
   }
   
   success(res, { product })
+}
+
+export async function resolveCodes (req: Request, res: Response) {
+  const body = await getBody(req)
+  const codes = JSON.parse(body as string)
+  
+  if (!Array.isArray(codes) || codes.length === 0) {
+    return failure(res, 'Cuerpo de la petición inválido. Se espera una lista de códigos', { status: 400 })
+  }
+  
+  const products = await getProductsResolvingCodes(codes)
+
+  success(res, { products })
 }
