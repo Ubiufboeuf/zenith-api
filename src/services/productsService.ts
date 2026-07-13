@@ -152,14 +152,44 @@ export async function getProductById (id: string): Promise<Product | undefined> 
 }
 
 export async function getProductsResolvingCodes (codes: string[]): Promise<Product[]> {
-  const listOfProducts: Product[] = []
+  const placeholders = codes.map(() => '?').join(', ')
 
-  for (const code of codes) {
-    const products = await getProductsByCode(code)
-    listOfProducts.push(...products)
+  const productsQuery = `
+    SELECT p.*, pc.* FROM products p
+    INNER JOIN product_codes pc ON p.id = pc.product_id
+    WHERE p.id IN (
+      SELECT DISTINCT product_id FROM product_codes WHERE code IN (${placeholders})
+    )
+  `
+
+  const productsResult = await db.execute({ sql: productsQuery, args: codes })
+  const productsRows = productsResult?.rows ?? []
+
+  const productsMap = new Map<string, { prodRow: Row, codes: ProductCode[] }>()
+
+  for (const row of productsRows) {
+    const prodId = row.product_id as string
+    
+    const codeValidation = ProductCodeSchema.safeParse(row)
+    if (!codeValidation.success) continue
+    const validCode = codeValidation.data
+
+    if (!productsMap.has(prodId)) {
+      productsMap.set(prodId, { prodRow: row, codes: [] })
+    }
+    
+    productsMap.get(prodId)?.codes.push(validCode)
   }
-  
-  return listOfProducts
+
+  const products: Product[] = []
+  for (const [, item] of productsMap) {
+    const product = formProductWithCodes(item.prodRow, item.codes)
+    if (product) {
+      products.push(product)
+    }
+  }
+
+  return products
 }
 
 function formProductWithCodes (row: Row, rows: (Row | ProductCode)[]) {
