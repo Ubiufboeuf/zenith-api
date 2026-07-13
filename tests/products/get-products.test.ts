@@ -3,9 +3,9 @@ import { getProduct, getProductByCode, getProducts } from '../helpers/products'
 import { ProductSchema } from '@/schemas/productsSchemas'
 
 // Habría que cambiar estos por productos creados en las pruebas y luego borrarlos
-const testCode = 'MOUSE-LOGI'
-const testCode2 = 'A1-PROMO'
-const testId = 'ad8e3b34-e545-4750-8b4a-39794f8717ba'
+const testCode = 'HKBO1S-RB-US/G'
+const testCode2 = '910-006628'
+const testId = '6751707d-6b78-4fc1-90c1-578d194e9531'
 
 describe('GET /products', () => {
   describe('Listar productos (Paginación)', () => {
