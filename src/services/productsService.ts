@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { db } from '@/config/db'
 import type { Product, ProductCode, ProductsServiceProps, ProductsServiceResult } from '@/types/productsTypes'
 import type { InArgs, Row } from '@libsql/client'
@@ -69,25 +68,14 @@ export async function getProducts ({ cursor, limit, since }: ProductsServiceProp
   if (visibleRows.length === 0) {
     return { nextCursor: null, products: [] }
   }
+
   
   const ids = visibleRows.map((row) => row.id as string)
-  const placeholders = ids.map(() => '?').join(', ')
-  const codesResult = await db.execute(
-    `SELECT * FROM product_codes WHERE product_id IN (${placeholders})`,
-    ids
-  )
-  const codeRows = codesResult.rows
-
-  const codesByProductId = codeRows.reduce((acc, codeRow) => {
-    const prodId = codeRow.product_id as string
-    if (!acc[prodId]) acc[prodId] = []
-    acc[prodId].push(codeRow)
-    return acc
-  }, {} as Record<string, any[]>)
+  const codes = await getCodes(ids)
 
   const products: Product[] = []
   for (const row of visibleRows) {
-    const associatedCodes = codesByProductId[row.id as string] || []
+    const associatedCodes = codes.get(row.id as string) || []
     const product = formProductWithCodes(row, associatedCodes)
     if (product) {
       products.push(product)
@@ -102,6 +90,29 @@ export async function getProducts ({ cursor, limit, since }: ProductsServiceProp
     products,
     nextCursor
   }
+}
+
+export async function getCodes (productsIds: string[]): Promise<Map<string, ProductCode[]>> {
+  const codes: Map<string, ProductCode[]> = new Map()
+
+  const placeholders = productsIds.map(() => '?').join(', ')
+  const codesResult = await db.execute(
+    `SELECT * FROM product_codes WHERE product_id IN (${placeholders})`,
+    productsIds
+  )
+  const { rows } = codesResult
+
+  for (const codeRow of rows) {
+    const prodId = codeRow.product_id as string
+    if (!codes.has(prodId)) codes.set(prodId, [])
+    
+    const code = ProductCodeSchema.safeParse(codeRow)
+    if (!code.success) continue
+
+    codes.get(prodId)?.push(code.data)
+  }
+
+  return codes
 }
 
 export async function getProductById (id: string): Promise<Product | undefined> {
@@ -123,7 +134,7 @@ export async function getProductById (id: string): Promise<Product | undefined> 
   return product
 }
 
-function formProductWithCodes (row: Row, rows: Row[]) {
+function formProductWithCodes (row: Row, rows: (Row | ProductCode)[]) {
   const productValidation = ProductsRowSchema.safeParse(row)
   if (!productValidation.success) return
 
