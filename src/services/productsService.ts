@@ -5,7 +5,7 @@ import { createCursor } from './cursorService'
 import { ProductsRowSchema } from '@/schemas/db'
 import { ProductCodeSchema } from '@/schemas/productsSchemas'
 
-export async function getProductsService ({ cursor, limit, code, since }: ProductsServiceProps): Promise<ProductsServiceResult> {
+export async function getProductsService ({ cursor, limit, code, since }: ProductsServiceProps): Promise<ProductsServiceResult | Product[]> {
   if (!code) {
     const { products, nextCursor } = await getProducts({ cursor, limit, since })
 
@@ -15,10 +15,9 @@ export async function getProductsService ({ cursor, limit, code, since }: Produc
     }
   }
 
-  return {
-    products: [],
-    nextCursor: null
-  }
+  const products = await getProductsByCode(code)
+
+  return products
 }
 
 function getProductsStatementParams ({ cursor, limit, since }: ProductsServiceProps): [string, InArgs] {
@@ -90,6 +89,30 @@ export async function getProducts ({ cursor, limit, since }: ProductsServiceProp
     products,
     nextCursor
   }
+}
+
+export async function getProductsByCode (code: string): Promise<Product[]> {
+  const productsQuery = `
+    SELECT * FROM products p
+    INNER JOIN product_codes pc ON p.id = pc.product_id
+    WHERE pc.code = ?
+  `
+
+  const productsResult = await db.execute(productsQuery, [code])
+  const productsRows = productsResult.rows
+
+  const products: Product[] = []
+  const codes = await getCodes(productsRows.map((r) => r.id as string))
+
+  for (const productRow of productsRows) {
+    const associatedCodes = codes.get(productRow.id as string) || []
+    const product = formProductWithCodes(productRow, associatedCodes)
+    if (product) {
+      products.push(product)
+    }
+  }
+
+  return products
 }
 
 export async function getCodes (productsIds: string[]): Promise<Map<string, ProductCode[]>> {

@@ -24,11 +24,15 @@ export async function getProducts (req: GetProductsRequest, res: Response) {
     code,
     since
   })
-  
-  return success(res, {
-    products: result.products,
-    nextCursor: result.nextCursor ? cursorToB64(result.nextCursor) : null
-  })
+
+  if ('nextCursor' in result) { 
+    return success(res, {
+      products: result.products,
+      nextCursor: result.nextCursor ? cursorToB64(result.nextCursor) : null
+    })
+  }
+
+  return success(res, { products: result })
 }
 
 export async function getProduct (req: Request<{ id: string }>, res: Response) {
