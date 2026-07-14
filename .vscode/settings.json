@@ -6,6 +6,7 @@
     "sales",
     "schemas",
     "payments",
-    "products"
+    "products",
+    "sales"
   ]
 }

@@ -4,6 +4,7 @@ import { getErrorsDetails } from '@/errors'
 import { PORT } from '@/lib/constants/env'
 import { ROUTES } from './lib/routes'
 import { productsRouter } from './routers/productsRouter'
+import { salesRouter } from './routers/salesRouter'
 
 async function main () {
   try {
@@ -18,6 +19,7 @@ async function main () {
   app.disable('x-powered-by')
 
   app.use(ROUTES.PRODUCTS, productsRouter)
+  app.use(ROUTES.SALES, salesRouter)
 
   app.use((_, res) => res.status(404).end())
 
