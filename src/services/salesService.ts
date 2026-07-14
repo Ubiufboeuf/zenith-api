@@ -1,8 +1,8 @@
 import { db } from '@/config/db'
-import { SaleSchema } from '@/schemas/salesSchemas'
-import type { Sale, SalesServiceProps, SalesServiceResult } from '@/types/salesTypes'
+import { SaleDetailSchema, SalePaymentSchema, SaleSchema } from '@/schemas/salesSchemas'
+import type { Sale, SaleDetail, SaleFull, SaleInclude, SalePayment, SalesServiceProps, SalesServiceResult, SaleWithDetails, SaleWithPayments } from '@/types/salesTypes'
 import { createCursor } from './cursorService'
-import type { InArgs } from '@libsql/client'
+import type { InArgs, InStatement } from '@libsql/client'
 
 export async function getSalesService ({ cursor, limit }: SalesServiceProps): Promise<SalesServiceResult> {
   const { sales, nextCursor } = await getSales({ cursor, limit })
@@ -60,14 +60,78 @@ export async function getSales ({ cursor, limit }: SalesServiceProps): Promise<S
   }
 }
 
-export async function getSaleById (id: string): Promise<Sale | undefined> {
-  const query = 'SELECT * FROM sales WHERE id = ?'
-  const result = await db.execute(query, [id])
-  const row = result.rows[0]
+function getSaleStatementsParams (id: string, include?: SaleInclude): (InStatement | [string, (InArgs | undefined)?])[] {
+  const saleQuery = `
+    SELECT * FROM sales
+    WHERE id = ?
+  `
 
-  if (!row) return
+  const paymentsQuery = `
+    SELECT * FROM sale_payments
+    WHERE sale_id = ?
+  `
+
+  const detailsQuery = `
+    SELECT * FROM sale_details
+    WHERE sale_id = ?
+  `
   
-  const saleValidation = SaleSchema.safeParse(row)
+  const stmts = [{ sql: saleQuery, args: [id] }]
 
-  return saleValidation.data
+  if (include === 'payments' || include === 'all') stmts.push({ sql: paymentsQuery, args: [id] })
+  if (include === 'details' || include === 'all') stmts.push({ sql: detailsQuery, args: [id] })
+
+  return stmts
+}
+
+export async function getSaleById (id: string, include?: SaleInclude): Promise<Sale | SaleWithDetails | SaleWithPayments | SaleFull | undefined> {
+  const stmts = getSaleStatementsParams(id, include)
+
+  const result = await db.batch(stmts)
+
+  let resultIdx = 0
+  const saleResult = result[resultIdx++]
+  const paymentsResult = (include === 'payments' || include === 'all') ? result[resultIdx++] : null
+  // eslint-disable-next-line no-useless-assignment
+  const detailsResult = (include === 'details' || include === 'all') ? result[resultIdx++] : null
+
+  const saleValidation = SaleSchema.safeParse(saleResult?.rows[0])
+  if (!saleValidation.success) return
+
+  const sale = saleValidation.data
+
+  const paymentsRows = paymentsResult?.rows ?? []
+  const detailsRows = detailsResult?.rows ?? []
+
+  if (paymentsRows.length) {
+    const salePayments: SalePayment[] = []
+
+    for (const paymentRow of paymentsRows) {
+      const salePaymentValidation = SalePaymentSchema.safeParse(paymentRow)
+      
+      if (!salePaymentValidation.success) continue   
+
+      const salePayment = salePaymentValidation.data
+      salePayments.push(salePayment)
+    }
+
+    ;(sale as SaleWithPayments).payments = salePayments
+  }
+  
+  if (detailsRows.length) {
+    const saleDetails: SaleDetail[] = []
+
+    for (const detailRow of detailsRows) {
+      const saleDetailValidation = SaleDetailSchema.safeParse(detailRow)
+      
+      if (!saleDetailValidation.success) continue   
+
+      const saleDetail = saleDetailValidation.data
+      saleDetails.push(saleDetail)
+      
+      ;(sale as SaleWithDetails).details = saleDetails
+    }
+  }
+  
+  return sale
 }

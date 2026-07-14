@@ -3,15 +3,17 @@ import { SaleDetailsRowSchema, SalePaymentsRowSchema, SalesRowSchema } from './d
 
 export const SaleSchema = SalesRowSchema
 
+export const SaleDetailSchema = SaleDetailsRowSchema
 export const SaleWithDetailsSchema = SaleSchema.extend({
-  details: z.array(SaleDetailsRowSchema)  
+  details: z.array(SaleDetailSchema)
 })
 
+export const SalePaymentSchema = SalePaymentsRowSchema
 export const SaleWithPaymentsSchema = SaleSchema.extend({
-  payments: z.array(SalePaymentsRowSchema)  
+  payments: z.array(SalePaymentSchema)  
 })
 
 export const SaleFullSchema = SaleSchema.extend({
-  details: z.array(SaleDetailsRowSchema),
-  payments: z.array(SalePaymentsRowSchema)
+  details: z.array(SaleDetailSchema),
+  payments: z.array(SalePaymentSchema)
 })
