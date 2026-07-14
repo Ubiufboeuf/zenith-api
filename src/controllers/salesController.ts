@@ -1,8 +1,8 @@
 import { createPagination, cursorToB64 } from '@/services/cursorService'
-import { getSalesService } from '@/services/salesService'
+import { getSaleById, getSalesService } from '@/services/salesService'
 import type { GetSalesRequest } from '@/types/salesTypes'
 import { failure, success } from '@/utils/response'
-import type { Response } from 'express'
+import type { Request, Response } from 'express'
 
 export async function getSales (req: GetSalesRequest, res: Response) {
   const pagination = createPagination(req)
@@ -23,4 +23,15 @@ export async function getSales (req: GetSalesRequest, res: Response) {
   }
 
   return success(res, { sales: result })
+}
+
+export async function getSale (req: Request<{ id: string }>, res: Response) {
+  const { id } = req.params
+
+  const sale = await getSaleById(id)
+  if (!sale) {
+    return failure(res, 'No se encontró la venta', { status: 404 })
+  }
+  
+  success(res, { sale })
 }

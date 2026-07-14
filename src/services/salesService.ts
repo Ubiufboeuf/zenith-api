@@ -59,3 +59,15 @@ export async function getSales ({ cursor, limit }: SalesServiceProps): Promise<S
     nextCursor
   }
 }
+
+export async function getSaleById (id: string): Promise<Sale | undefined> {
+  const query = 'SELECT * FROM sales WHERE id = ?'
+  const result = await db.execute(query, [id])
+  const row = result.rows[0]
+
+  if (!row) return
+  
+  const saleValidation = SaleSchema.safeParse(row)
+
+  return saleValidation.data
+}
