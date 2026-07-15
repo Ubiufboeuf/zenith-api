@@ -1,12 +1,14 @@
+/* eslint-disable no-useless-assignment */
 import { db } from '@/config/db'
 import { SaleDetailSchema, SalePaymentSchema, SaleSchema } from '@/schemas/salesSchemas'
 import type { Sale, SaleDetail, SaleFull, SaleInclude, SalePayment, SalesServiceProps, SalesServiceResult, SaleWithDetails, SaleWithPayments } from '@/types/salesTypes'
 import { createCursor } from './cursorService'
 import type { InArgs, InStatement } from '@libsql/client'
-import type { DatabaseStatement } from '@/types/connectionTypes'
+import type { DatabaseStatements } from '@/types/connectionTypes'
+import { indexArray } from '@/lib/indexArray'
 
-export async function getSalesService ({ cursor, limit }: SalesServiceProps): Promise<SalesServiceResult> {
-  const { sales, nextCursor } = await getSales({ cursor, limit })
+export async function getSalesService (props: SalesServiceProps): Promise<SalesServiceResult> {
+  const { sales, nextCursor } = await getSales(props)
 
   return {
     sales,
@@ -14,50 +16,97 @@ export async function getSalesService ({ cursor, limit }: SalesServiceProps): Pr
   }
 }
 
-function getSalesStatementParams ({ cursor, limit }: SalesServiceProps): DatabaseStatement {
+function getSalesStatementParams ({ cursor, limit, include }: SalesServiceProps): DatabaseStatements {
   const conditions: string[] = []
-  const args: InArgs = []
+  const salesArgs: InArgs = []
 
   const lastId = cursor?.lastId ?? null
   if (lastId) {
     conditions.push('s.id > ?')
-    args.push(lastId)
+    salesArgs.push(lastId)
   }
 
   const whereClause = conditions.length > 0
     ? `WHERE ${conditions.join(' AND ')}`
     : ''
 
-  const sql = `
+  const salesQuery = `
     SELECT s.* FROM sales s
     ${whereClause}
     ORDER BY s.id ASC
     LIMIT ?
-  `.trim()
+  `
 
-  args.push(limit)
+  salesArgs.push(limit)
 
-  return { sql, args }
+  const paymentsQuery = `
+    SELECT * FROM sale_payments
+    WHERE sale_id IN (SELECT id FROM (${salesQuery}))
+  `
+
+  const detailsQuery = `
+    SELECT * FROM sale_details
+    WHERE sale_id IN (SELECT id FROM (${salesQuery}))
+  `
+  
+  const stmts: DatabaseStatements = [{ sql: salesQuery, args: salesArgs }]
+
+  if (include === 'payments' || include === 'all') stmts.push({ sql: paymentsQuery, args: salesArgs })
+  if (include === 'details' || include === 'all') stmts.push({ sql: detailsQuery, args: salesArgs })
+
+  return stmts
 }
 
-export async function getSales ({ cursor, limit }: SalesServiceProps): Promise<SalesServiceResult> {
-  const { args, sql } = getSalesStatementParams({ cursor, limit: limit + 1 })  
-  const result = await db.execute(sql, args)
+export async function getSales ({ cursor, limit, include }: SalesServiceProps): Promise<SalesServiceResult> {
+  const stmts = getSalesStatementParams({ cursor, limit: limit + 1, include })  
+  const results = await db.batch(stmts)
 
-  const { rows } = result
-  const hasMore = rows.length > limit
-  const visibleRows = hasMore ? rows.slice(0, limit) : rows
+  let resultIdx = 0
+  const salesResult = results[resultIdx++]
+  const paymentsResult = (include === 'payments' || include === 'all') ? results[resultIdx++] : null
+  const detailsResult = (include === 'details' || include === 'all') ? results[resultIdx++] : null
 
-  if (visibleRows.length === 0) {
+  if (!salesResult?.rows) {
+    return {
+      sales: [],
+      nextCursor: null
+    }
+  }
+
+  const hasMore = salesResult.rows.length > limit
+  const salesRows = hasMore ? salesResult.rows.slice(0, limit) : salesResult.rows
+  
+  if (salesRows.length === 0) {
     return { nextCursor: null, sales: [] }
   }
-  
+
+  const paymentsRows = paymentsResult?.rows ?? []
+  const detailsRows = detailsResult?.rows ?? []
+
+  const indexedPayments = indexArray(paymentsRows as unknown as SalePayment[], 'sale_id')
+  const indexedDetails = indexArray(detailsRows as unknown as SaleDetail[], 'sale_id')
+
   const sales: Sale[] = []
 
-  for (const row of visibleRows) {
+  for (const row of salesRows) {
     const saleValidation = SaleSchema.safeParse(row)
     if (!saleValidation.success) continue
-    sales.push(saleValidation.data)
+
+    const sale = saleValidation.data
+    
+    if (include === 'payments' || include === 'all') {
+      const payments = indexedPayments.get(sale.id) ?? []
+      
+      ;(sale as SaleWithPayments).payments = payments
+    }
+
+    if (include === 'details' || include === 'all') {
+      const details = indexedDetails.get(sale.id) ?? []
+      
+      ;(sale as SaleWithDetails).details = details
+    }
+
+    sales.push(sale)
   }
 
   const nextCursor = hasMore
@@ -102,7 +151,6 @@ export async function getSaleById (id: string, include?: SaleInclude): Promise<S
   let resultIdx = 0
   const saleResult = result[resultIdx++]
   const paymentsResult = (include === 'payments' || include === 'all') ? result[resultIdx++] : null
-  // eslint-disable-next-line no-useless-assignment
   const detailsResult = (include === 'details' || include === 'all') ? result[resultIdx++] : null
 
   const saleValidation = SaleSchema.safeParse(saleResult?.rows[0])

@@ -13,7 +13,8 @@ export type SaleFull = z.infer<typeof SaleFullSchema>
 export type GetSalesRequest = Request<null, null, null, {
   limit?: string
   cursor?: string
-}>
+  [key: string]: string | undefined
+} & SalesQueryOptions>
 
 export type GetSaleRequest = Request<{ id: string }, null, null, {
   include?: SaleInclude
@@ -21,7 +22,11 @@ export type GetSaleRequest = Request<{ id: string }, null, null, {
 
 export type SaleInclude = 'details' | 'payments' | 'all'
 
-export interface SalesServiceProps {
+export interface SalesQueryOptions {
+  include?: SaleInclude
+}
+
+export interface SalesServiceProps extends SalesQueryOptions {
   limit: number
   cursor: Cursor | null
 }

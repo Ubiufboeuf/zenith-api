@@ -8,3 +8,5 @@ export interface DatabaseStatement {
   sql: string
   args: InArgs
 }
+
+export type DatabaseStatements = Array<DatabaseStatement>
