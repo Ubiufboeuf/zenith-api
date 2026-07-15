@@ -13,7 +13,7 @@ export async function getSalesService ({ cursor, limit }: SalesServiceProps): Pr
   }
 }
 
-function getProductsStatementParams ({ cursor, limit }: SalesServiceProps): [string, InArgs] {
+function getSalesStatementParams ({ cursor, limit }: SalesServiceProps): [string, InArgs] {
   const lastId = cursor?.lastId ?? null
 
   if (lastId) {
@@ -31,7 +31,7 @@ function getProductsStatementParams ({ cursor, limit }: SalesServiceProps): [str
 }
 
 export async function getSales ({ cursor, limit }: SalesServiceProps): Promise<SalesServiceResult> {
-  const [query, args] = getProductsStatementParams({ cursor, limit: limit + 1 })  
+  const [query, args] = getSalesStatementParams({ cursor, limit: limit + 1 })  
   const result = await db.execute(query, args)
 
   const { rows } = result
