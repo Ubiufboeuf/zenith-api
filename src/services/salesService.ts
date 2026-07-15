@@ -16,7 +16,7 @@ export async function getSalesService (props: SalesServiceProps): Promise<SalesS
   }
 }
 
-function getSalesStatementParams ({ cursor, limit, include }: SalesServiceProps): DatabaseStatements {
+function getSalesStatementParams ({ cursor, limit, include, since, until }: SalesServiceProps): DatabaseStatements {
   const conditions: string[] = []
   const salesArgs: InArgs = []
 
@@ -24,6 +24,16 @@ function getSalesStatementParams ({ cursor, limit, include }: SalesServiceProps)
   if (lastId) {
     conditions.push('s.id > ?')
     salesArgs.push(lastId)
+  }
+
+  if (since) {
+    conditions.push('s.created_at >= ?')
+    salesArgs.push(since)
+  }
+
+  if (until) {
+    conditions.push('s.created_at < ?')
+    salesArgs.push(until)
   }
 
   const whereClause = conditions.length > 0
@@ -57,8 +67,8 @@ function getSalesStatementParams ({ cursor, limit, include }: SalesServiceProps)
   return stmts
 }
 
-export async function getSales ({ cursor, limit, include }: SalesServiceProps): Promise<SalesServiceResult> {
-  const stmts = getSalesStatementParams({ cursor, limit: limit + 1, include })  
+export async function getSales ({ cursor, limit, include, since, until }: SalesServiceProps): Promise<SalesServiceResult> {
+  const stmts = getSalesStatementParams({ cursor, limit: limit + 1, include, since, until })  
   const results = await db.batch(stmts)
 
   let resultIdx = 0

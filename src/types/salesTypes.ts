@@ -24,6 +24,8 @@ export type SaleInclude = 'details' | 'payments' | 'all'
 
 export interface SalesQueryOptions {
   include?: SaleInclude
+  since?: string
+  until?: string
 }
 
 export interface SalesServiceProps extends SalesQueryOptions {
