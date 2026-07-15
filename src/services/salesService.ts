@@ -16,7 +16,9 @@ export async function getSalesService (props: SalesServiceProps): Promise<SalesS
   }
 }
 
-function getSalesStatementParams ({ cursor, limit, include, since, until, currency }: SalesServiceProps): DatabaseStatements {
+function getSalesStatementParams (props: SalesServiceProps): DatabaseStatements {
+  const { cursor, limit, include, since, until, currency } = props
+  
   const conditions: string[] = []
   const salesArgs: InArgs = []
 
@@ -72,8 +74,8 @@ function getSalesStatementParams ({ cursor, limit, include, since, until, curren
   return stmts
 }
 
-export async function getSales ({ cursor, limit, include, since, until, currency }: SalesServiceProps): Promise<SalesServiceResult> {
-  const stmts = getSalesStatementParams({ cursor, limit: limit + 1, include, since, until, currency })  
+export async function getSales ({ cursor, limit, include, ...rest }: SalesServiceProps): Promise<SalesServiceResult> {
+  const stmts = getSalesStatementParams({ cursor, limit: limit + 1, include, ...rest })  
   const results = await db.batch(stmts)
 
   let resultIdx = 0
