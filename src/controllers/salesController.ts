@@ -10,14 +10,15 @@ export async function getSales (req: GetSalesRequest, res: Response) {
     return failure(res, pagination.error, { status: pagination.status })
   }
 
-  const { include, since, until } = req.query
+  const { include, since, until, currency } = req.query
 
   const result = await getSalesService({
     limit: pagination.limit,
     cursor: pagination.cursor,
     include,
     since,
-    until
+    until,
+    currency
   })
 
   if ('nextCursor' in result) { 

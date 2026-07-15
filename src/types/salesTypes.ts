@@ -2,6 +2,7 @@ import type z from 'zod'
 import type { Cursor } from './cursorTypes'
 import type { SaleDetailSchema, SaleFullSchema, SalePaymentSchema, SaleSchema, SaleWithDetailsSchema, SaleWithPaymentsSchema } from '@/schemas/salesSchemas'
 import type { Request } from 'express'
+import type { Currency } from './currenciesTypes'
 
 export type Sale = z.infer<typeof SaleSchema>
 export type SaleDetail = z.infer<typeof SaleDetailSchema>
@@ -26,6 +27,7 @@ export interface SalesQueryOptions {
   include?: SaleInclude
   since?: string
   until?: string
+  currency?: Currency
 }
 
 export interface SalesServiceProps extends SalesQueryOptions {
