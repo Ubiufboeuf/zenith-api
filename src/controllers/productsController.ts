@@ -1,15 +1,9 @@
 import { createPagination, cursorToB64 } from '@/services/cursorService'
 import { getProductById, getProductsResolvingCodes, getProductsService } from '@/services/productsService'
+import type { GetProductsRequest } from '@/types/productsTypes'
 import { getBody } from '@/utils/request'
 import { failure, success } from '@/utils/response'
 import type { Request, Response } from 'express'
-
-type GetProductsRequest = Request<null, null, null, {
-  code?: string
-  since?: string
-  limit?: string
-  cursor?: string
-}>
 
 export async function getProducts (req: GetProductsRequest, res: Response) {
   const pagination = createPagination(req)
