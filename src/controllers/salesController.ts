@@ -1,6 +1,7 @@
 import { createPagination, cursorToB64 } from '@/services/cursorService'
 import { getSaleById, getSalesService } from '@/services/salesService'
 import type { GetSaleRequest, GetSalesRequest } from '@/types/salesTypes'
+import { getIncludeOptions } from '@/utils/request'
 import { failure, success } from '@/utils/response'
 import type { Response } from 'express'
 
@@ -10,7 +11,9 @@ export async function getSales (req: GetSalesRequest, res: Response) {
     return failure(res, pagination.error, { status: pagination.status })
   }
 
-  const { include, since, until, currency } = req.query
+  const { since, until, currency } = req.query
+
+  const include = getIncludeOptions(req.query.include)
 
   const result = await getSalesService({
     limit: pagination.limit,
@@ -33,8 +36,8 @@ export async function getSales (req: GetSalesRequest, res: Response) {
 
 export async function getSale (req: GetSaleRequest, res: Response) {
   const { id } = req.params
-  const { include } = req.query
 
+  const include = getIncludeOptions(req.query.include)
   const sale = await getSaleById(id, include)
   if (!sale) {
     return failure(res, 'No se encontró la venta', { status: 404 })

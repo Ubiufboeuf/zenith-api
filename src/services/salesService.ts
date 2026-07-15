@@ -68,8 +68,8 @@ function getSalesStatementParams (props: SalesServiceProps): DatabaseStatements 
   
   const stmts: DatabaseStatements = [{ sql: salesQuery, args: salesArgs }]
 
-  if (include === 'payments' || include === 'all') stmts.push({ sql: paymentsQuery, args: salesArgs })
-  if (include === 'details' || include === 'all') stmts.push({ sql: detailsQuery, args: salesArgs })
+  if (include.payments) stmts.push({ sql: paymentsQuery, args: salesArgs })
+  if (include.details) stmts.push({ sql: detailsQuery, args: salesArgs })
 
   return stmts
 }
@@ -80,8 +80,8 @@ export async function getSales ({ cursor, limit, include, ...rest }: SalesServic
 
   let resultIdx = 0
   const salesResult = results[resultIdx++]
-  const paymentsResult = (include === 'payments' || include === 'all') ? results[resultIdx++] : null
-  const detailsResult = (include === 'details' || include === 'all') ? results[resultIdx++] : null
+  const paymentsResult = include.payments ? results[resultIdx++] : null
+  const detailsResult = include.details ? results[resultIdx++] : null
 
   if (!salesResult?.rows) {
     return {
@@ -111,13 +111,13 @@ export async function getSales ({ cursor, limit, include, ...rest }: SalesServic
 
     const sale = saleValidation.data
     
-    if (include === 'payments' || include === 'all') {
+    if (include.payments) {
       const payments = indexedPayments.get(sale.id) ?? []
       
       ;(sale as SaleWithPayments).payments = payments
     }
 
-    if (include === 'details' || include === 'all') {
+    if (include.details) {
       const details = indexedDetails.get(sale.id) ?? []
       
       ;(sale as SaleWithDetails).details = details
@@ -136,7 +136,7 @@ export async function getSales ({ cursor, limit, include, ...rest }: SalesServic
   }
 }
 
-function getSaleStatementsParams (id: string, include?: SaleInclude): (InStatement | [string, (InArgs | undefined)?])[] {
+function getSaleStatementsParams (id: string, include: SaleInclude): (InStatement | [string, (InArgs | undefined)?])[] {
   const saleQuery = `
     SELECT * FROM sales
     WHERE id = ?
@@ -154,21 +154,21 @@ function getSaleStatementsParams (id: string, include?: SaleInclude): (InStateme
   
   const stmts = [{ sql: saleQuery, args: [id] }]
 
-  if (include === 'payments' || include === 'all') stmts.push({ sql: paymentsQuery, args: [id] })
-  if (include === 'details' || include === 'all') stmts.push({ sql: detailsQuery, args: [id] })
+  if (include.payments) stmts.push({ sql: paymentsQuery, args: [id] })
+  if (include.details) stmts.push({ sql: detailsQuery, args: [id] })
 
   return stmts
 }
 
-export async function getSaleById (id: string, include?: SaleInclude): Promise<Sale | SaleWithDetails | SaleWithPayments | SaleFull | undefined> {
+export async function getSaleById (id: string, include: SaleInclude): Promise<Sale | SaleWithDetails | SaleWithPayments | SaleFull | undefined> {
   const stmts = getSaleStatementsParams(id, include)
 
   const result = await db.batch(stmts)
 
   let resultIdx = 0
   const saleResult = result[resultIdx++]
-  const paymentsResult = (include === 'payments' || include === 'all') ? result[resultIdx++] : null
-  const detailsResult = (include === 'details' || include === 'all') ? result[resultIdx++] : null
+  const paymentsResult = include.payments ? result[resultIdx++] : null
+  const detailsResult = include.details ? result[resultIdx++] : null
 
   const saleValidation = SaleSchema.safeParse(saleResult?.rows[0])
   if (!saleValidation.success) return
