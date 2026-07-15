@@ -3,6 +3,7 @@ import { SaleDetailSchema, SalePaymentSchema, SaleSchema } from '@/schemas/sales
 import type { Sale, SaleDetail, SaleFull, SaleInclude, SalePayment, SalesServiceProps, SalesServiceResult, SaleWithDetails, SaleWithPayments } from '@/types/salesTypes'
 import { createCursor } from './cursorService'
 import type { InArgs, InStatement } from '@libsql/client'
+import type { DatabaseStatement } from '@/types/connectionTypes'
 
 export async function getSalesService ({ cursor, limit }: SalesServiceProps): Promise<SalesServiceResult> {
   const { sales, nextCursor } = await getSales({ cursor, limit })
@@ -13,26 +14,35 @@ export async function getSalesService ({ cursor, limit }: SalesServiceProps): Pr
   }
 }
 
-function getSalesStatementParams ({ cursor, limit }: SalesServiceProps): [string, InArgs] {
-  const lastId = cursor?.lastId ?? null
+function getSalesStatementParams ({ cursor, limit }: SalesServiceProps): DatabaseStatement {
+  const conditions: string[] = []
+  const args: InArgs = []
 
+  const lastId = cursor?.lastId ?? null
   if (lastId) {
-    return [`
-      SELECT * FROM sales
-      WHERE id > ?
-      ORDER BY id ASC LIMIT ?
-    `, [lastId, limit]]
+    conditions.push('s.id > ?')
+    args.push(lastId)
   }
 
-  return [`
-    SELECT * FROM sales
-    ORDER BY id ASC LIMIT ?
-  `, [limit]]
+  const whereClause = conditions.length > 0
+    ? `WHERE ${conditions.join(' AND ')}`
+    : ''
+
+  const sql = `
+    SELECT s.* FROM sales s
+    ${whereClause}
+    ORDER BY s.id ASC
+    LIMIT ?
+  `.trim()
+
+  args.push(limit)
+
+  return { sql, args }
 }
 
 export async function getSales ({ cursor, limit }: SalesServiceProps): Promise<SalesServiceResult> {
-  const [query, args] = getSalesStatementParams({ cursor, limit: limit + 1 })  
-  const result = await db.execute(query, args)
+  const { args, sql } = getSalesStatementParams({ cursor, limit: limit + 1 })  
+  const result = await db.execute(sql, args)
 
   const { rows } = result
   const hasMore = rows.length > limit
