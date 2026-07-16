@@ -1,14 +1,18 @@
 {
   "conventionalCommits.scopes": [
-    "endpoint",
-    "dev",
-    "errors",
-    "sales",
-    "schemas",
-    "payments",
-    "products",
-    "sales",
-    "types",
-    "typo"
+    "config",
+    "controller",
+    "router",
+    "service",
+    "schema",
+    "validation",
+    "type",
+    "lib",
+    "utils",
+    "error",
+    "test",
+    "db",
+    "deps",
+    "dx"
   ]
 }
