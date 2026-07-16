@@ -4,6 +4,7 @@ import type { SaleDetailSchema, SaleFullSchema, SalePaymentSchema, SaleSchema, S
 import type { Request } from 'express'
 import type { Currency } from './currenciesTypes'
 import type { SALE_INCLUDE } from '@/lib/constants/sales'
+import type { PAYMENT_METHODS } from '@/lib/constants/payments'
 
 export type Sale = z.infer<typeof SaleSchema>
 export type SaleDetail = z.infer<typeof SaleDetailSchema>
@@ -16,8 +17,11 @@ export type GetSalesRequest = Request<null, null, null, {
   limit?: string
   cursor?: string
   include?: string
+  payment_method?: string
   [key: string]: string | undefined
 } & SalesQueryOptions>
+
+export type GetSalesRequestQuery = GetSalesRequest['query']
 
 export type GetSaleRequest = Request<{ id: string }, null, null, {
   include?: string
@@ -25,6 +29,9 @@ export type GetSaleRequest = Request<{ id: string }, null, null, {
 
 export type SaleInclude = typeof SALE_INCLUDE
 export type SaleIncludeOption = keyof SaleInclude
+export type PaymentMethodList = typeof PAYMENT_METHODS
+export type PaymentMethod = Lowercase<PaymentMethodList[number]>
+export type PaymentMethods = Record<PaymentMethod, boolean>
 
 export interface SalesQueryOptions {
   since?: string
@@ -32,10 +39,11 @@ export interface SalesQueryOptions {
   currency?: Currency
 }
 
-export interface SalesServiceProps extends SalesQueryOptions {
+export interface SalesExtendedQueryOptions extends SalesQueryOptions {
   limit: number
   cursor: Cursor | null
   include: Record<SaleIncludeOption, boolean>
+  payment_method: Record<PaymentMethod, boolean>
 }
 
 export interface SalesServiceResult {

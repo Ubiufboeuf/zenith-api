@@ -1,4 +1,4 @@
-import type { Cursor, PaginationRequest, PaginationResult } from '@/types/cursorTypes'
+import type { Cursor, PaginationRequestQuery, PaginationResult } from '@/types/cursorTypes'
 import { validateLimit } from '@/validations/paginationValidations'
 
 export function createCursor (lastId?: string | null): Cursor {
@@ -28,8 +28,8 @@ export function cursorFromB64 (cursor: string): Cursor | null {
   }
 }
 
-export function createPagination (req: PaginationRequest): PaginationResult {
-  const limitValidation = validateLimit(req.query.limit ?? 1)
+export function createPagination (query: PaginationRequestQuery): PaginationResult {
+  const limitValidation = validateLimit(query.limit ?? 1)
   if (!limitValidation.success) {
     return {
       success: false,
@@ -38,7 +38,7 @@ export function createPagination (req: PaginationRequest): PaginationResult {
     }
   }
 
-  const { cursor: prevCursor } = req.query
+  const { cursor: prevCursor } = query
   const limit = limitValidation.data
 
   const cursor = prevCursor

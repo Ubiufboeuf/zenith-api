@@ -1,14 +1,90 @@
 /* eslint-disable no-useless-assignment */
 import { db } from '@/config/db'
 import { SaleDetailSchema, SalePaymentSchema, SaleSchema } from '@/schemas/salesSchemas'
-import type { Sale, SaleDetail, SaleFull, SaleInclude, SalePayment, SalesServiceProps, SalesServiceResult, SaleWithDetails, SaleWithPayments } from '@/types/salesTypes'
-import { createCursor } from './cursorService'
+import type { GetSalesRequestQuery, PaymentMethod, PaymentMethods, Sale, SaleDetail, SaleFull, SaleInclude, SaleIncludeOption, SalePayment, SalesExtendedQueryOptions, SalesServiceResult, SaleWithDetails, SaleWithPayments } from '@/types/salesTypes'
+import { createCursor, createPagination } from './cursorService'
 import type { InArgs, InStatement } from '@libsql/client'
 import type { DatabaseStatements } from '@/types/connectionTypes'
 import { indexArray } from '@/lib/indexArray'
+import { isEveryEnabled, isSomeEnabled, toEnableAll } from '@/utils/objects'
+import { PAYMENT_METHODS } from '@/lib/constants/payments'
+import { SALE_INCLUDE } from '@/lib/constants/sales'
+import { HttpError } from '@/errors/HttpError'
 
-export async function getSalesService (props: SalesServiceProps): Promise<SalesServiceResult> {
-  const { sales, nextCursor } = await getSales(props)
+export function getSalePaymentMethod (query: GetSalesRequestQuery): PaymentMethods {
+  const methods: Record<string, boolean> = {}
+
+  for (const METHOD of PAYMENT_METHODS) {
+    const m = METHOD.toLowerCase()
+    methods[m] = false
+  }
+
+  if (!query.payment_method) return methods as PaymentMethods
+  
+  const items = query.payment_method.split(',')
+
+  if (items.some((i) => i === 'any')) return toEnableAll(methods) as PaymentMethods
+
+  for (const item of items) {
+    if (!item || !(item in methods)) continue
+
+    methods[item] = true
+  }
+
+  return methods as PaymentMethods
+}
+
+/**
+ * @throws HTTPError
+ */
+export function getSalesQueryOptions (query: GetSalesRequestQuery): SalesExtendedQueryOptions {
+  const pagination = createPagination(query)
+  if (!pagination.success) {
+    throw new HttpError(pagination.error, null, pagination.status)
+  }
+
+  const { currency, since, until } = query
+
+  const payment_method = getSalePaymentMethod(query)
+  const include = getSaleIncludeOptions(query, Object.values(payment_method).some((m) => m))
+
+  const extendedQueryOptions: SalesExtendedQueryOptions = {
+    limit: pagination.limit,
+    cursor: pagination.cursor,
+    include,
+    payment_method,
+    currency,
+    since,
+    until
+  }
+  
+  return extendedQueryOptions
+}
+
+export function getSaleIncludeOptions (query: GetSalesRequestQuery, queryHasPaymentMethod: boolean): SaleInclude {
+  const include = { ...SALE_INCLUDE }
+
+  if (!query.include && !queryHasPaymentMethod) return SALE_INCLUDE
+
+  const items = query.include?.split(',') ?? []
+
+  if (items.some((i) => i === 'all')) {
+    return toEnableAll(include) as SaleInclude
+  }
+
+  for (const item of items) {
+    if (!item || !(item in SALE_INCLUDE)) continue
+
+    include[item as SaleIncludeOption] = true
+  }
+
+  if (queryHasPaymentMethod) include.payments = true
+
+  return include
+}
+
+export async function getSalesService (query: SalesExtendedQueryOptions): Promise<SalesServiceResult> {
+  const { sales, nextCursor } = await getSales(query)
 
   return {
     sales,
@@ -16,8 +92,8 @@ export async function getSalesService (props: SalesServiceProps): Promise<SalesS
   }
 }
 
-function getSalesStatementParams (props: SalesServiceProps): DatabaseStatements {
-  const { cursor, limit, include, since, until, currency } = props
+function getSalesStatementParams (props: SalesExtendedQueryOptions): DatabaseStatements {
+  const { cursor, limit, include, since, until, currency, payment_method } = props
   
   const conditions: string[] = []
   const salesArgs: InArgs = []
@@ -41,6 +117,29 @@ function getSalesStatementParams (props: SalesServiceProps): DatabaseStatements 
   if (currency) {
     conditions.push('s.currency = ?')
     salesArgs.push(currency.toUpperCase())
+  }
+
+  // === NUEVO: Filtro EXISTS para métodos de pago ===
+  const somePaymentMethod = isSomeEnabled(payment_method)
+  const everyPaymentMethod = isEveryEnabled(payment_method)
+
+  if (somePaymentMethod && !everyPaymentMethod) {
+    const methods: string[] = []
+    
+    for (const METHOD of PAYMENT_METHODS) {
+      const m = METHOD.toLowerCase() as PaymentMethod
+      if (!payment_method[m]) continue
+
+      methods.push('sp.payment_method = ?')
+      salesArgs.push(METHOD)
+    }
+
+    if (methods.length > 0) {
+      conditions.push(`EXISTS (
+        SELECT 1 FROM sale_payments sp 
+        WHERE sp.sale_id = s.id AND (${methods.join(' OR ')})
+      )`)
+    }
   }
 
   const whereClause = conditions.length > 0
@@ -74,7 +173,7 @@ function getSalesStatementParams (props: SalesServiceProps): DatabaseStatements 
   return stmts
 }
 
-export async function getSales ({ cursor, limit, include, ...rest }: SalesServiceProps): Promise<SalesServiceResult> {
+export async function getSales ({ cursor, limit, include, ...rest }: SalesExtendedQueryOptions): Promise<SalesServiceResult> {
   const stmts = getSalesStatementParams({ cursor, limit: limit + 1, include, ...rest })  
   const results = await db.batch(stmts)
 

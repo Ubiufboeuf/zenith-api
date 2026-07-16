@@ -1,28 +1,27 @@
-import { createPagination, cursorToB64 } from '@/services/cursorService'
-import { getSaleById, getSalesService } from '@/services/salesService'
+import { HttpError } from '@/errors/HttpError'
+import { cursorToB64 } from '@/services/cursorService'
+import { getSaleById, getSaleIncludeOptions, getSalesQueryOptions, getSalesService } from '@/services/salesService'
 import type { GetSaleRequest, GetSalesRequest } from '@/types/salesTypes'
-import { getIncludeOptions } from '@/utils/request'
 import { failure, success } from '@/utils/response'
 import type { Response } from 'express'
 
 export async function getSales (req: GetSalesRequest, res: Response) {
-  const pagination = createPagination(req)
-  if (!pagination.success) {
-    return failure(res, pagination.error, { status: pagination.status })
+  let options
+  try { 
+    options = getSalesQueryOptions(req.query)
+  } catch (err) {
+    if (err instanceof HttpError) {
+      return failure(res, err.message, { status: err.statusCode })
+    }
+
+    if (err instanceof Error) {
+      return failure(res, err.message, { status: 500 })
+    }
+
+    return failure(res, 'Error desconocido', { status: 500 })
   }
 
-  const { since, until, currency } = req.query
-
-  const include = getIncludeOptions(req.query.include)
-
-  const result = await getSalesService({
-    limit: pagination.limit,
-    cursor: pagination.cursor,
-    include,
-    since,
-    until,
-    currency
-  })
+  const result = await getSalesService(options)
 
   if ('nextCursor' in result) { 
     return success(res, {
@@ -37,7 +36,7 @@ export async function getSales (req: GetSalesRequest, res: Response) {
 export async function getSale (req: GetSaleRequest, res: Response) {
   const { id } = req.params
 
-  const include = getIncludeOptions(req.query.include)
+  const include = getSaleIncludeOptions(req.query, false)
   const sale = await getSaleById(id, include)
   if (!sale) {
     return failure(res, 'No se encontró la venta', { status: 404 })
