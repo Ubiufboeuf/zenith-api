@@ -6,7 +6,7 @@ import { failure, success } from '@/utils/response'
 import type { Request, Response } from 'express'
 
 export async function getProducts (req: GetProductsRequest, res: Response) {
-  const pagination = createPagination(req)
+  const pagination = createPagination(req.query)
   if (!pagination.success) {
     return failure(res, pagination.error, { status: pagination.status })
   }
