@@ -1,9 +1,15 @@
 import { db } from '@/config/db'
-import type { Product, ProductCode, ProductsServiceProps, ProductsServiceResult } from '@/types/productsTypes'
-import type { InArgs, Row } from '@libsql/client'
+import type { CreateProduct, CreateProductResult, Product, ProductCode, ProductsServiceProps, ProductsServiceResult, StrictCreateProduct } from '@/types/productsTypes'
+import type { InArgs, InStatement, Row } from '@libsql/client'
 import { createCursor } from './cursorService'
 import { ProductsRowSchema } from '@/schemas/db'
 import { ProductCodeSchema } from '@/schemas/productsSchemas'
+import { validateStrictProductCreation } from '@/validations/productsValidations'
+import { getProductFieldIssues } from '@/errors/productErrors'
+import { ZodError } from 'zod'
+import { INITIAL_EVENT_VALUE, PRODUCT_EVENTS } from '@/lib/constants/products'
+import { Temporal } from 'temporal-polyfill'
+import { getErrorsDetails } from '@/errors'
 
 export async function getProductsService ({ cursor, limit, code, since }: ProductsServiceProps): Promise<ProductsServiceResult | Product[]> {
   if (!code) {
@@ -211,4 +217,116 @@ function formProductWithCodes (row: Row, rows: (Row | ProductCode)[]) {
     ...product,
     codes
   }
+}
+
+export async function createProductService (createProduct: CreateProduct): Promise<CreateProductResult> {
+  const strictCreateProductValidation = validateStrictProductCreation(createProduct)
+
+  if (!strictCreateProductValidation.success) {
+    const { error, userFriendlyError } = strictCreateProductValidation
+    console.error(error)
+
+    let errorMessage = 'Error desconocido'
+    let status = 500
+    
+    if (userFriendlyError instanceof ZodError) {
+      const inputFields = createProduct
+      const missingFields = getProductFieldIssues({ error: userFriendlyError, inputFields })
+      errorMessage = `Faltan datos para crear el producto: ${missingFields}`
+      status = 400
+    } else if (typeof userFriendlyError === 'string') {
+      errorMessage = userFriendlyError
+      status = strictCreateProductValidation.status ?? status
+    }
+    
+    return {
+      success: false,
+      error: errorMessage,
+      status
+    }
+  }
+
+  const product = strictCreateProductValidation.data
+
+  try {
+    await createNewProduct(product)
+  } catch (err) {
+    console.error(err)
+    const errorDetails = getErrorsDetails(err)
+    
+    if ('code' in errorDetails && errorDetails.code === 'SQLITE_CONSTRAINT_PRIMARYKEY' || errorDetails.message?.includes('UNIQUE')) {
+      return {
+        success: false,
+        error: 'El producto ya existe',
+        status: 409
+      }
+    }
+
+    return {
+      success: false,
+      error: 'Error creando el producto',
+      status: 500
+    }
+  }
+  
+  return {
+    success: true,
+    product
+  }
+}
+
+async function createNewProduct (product: StrictCreateProduct): Promise<void> {
+  const now = Temporal.Now.instant().toZonedDateTimeISO('UTC').toString()
+  
+  const productArgs: InArgs = [
+    product.id,
+    product.title,
+    product.subtitle ?? '',
+    product.provider ?? '',
+    product.brand ?? '',
+    product.category ?? '',
+    product.cost_price,
+    product.cost_currency,
+    product.sale_price,
+    product.sale_currency,
+    product.stock ?? 0
+  ]
+  const eventArgs: InArgs = [
+    crypto.randomUUID(),
+    product.id,
+    PRODUCT_EVENTS.CREATED_AT,
+    INITIAL_EVENT_VALUE,
+    now,
+    now
+  ]
+
+  const productPlaceholders = productArgs.map(() => '?').join(', ')
+  const eventPlaceholders = eventArgs.map(() => '?').join(', ')
+
+  const stmts: InStatement[] = [
+    { sql: `INSERT INTO products (id, title, subtitle, provider, brand, category, cost_price, cost_currency, sale_price, sale_currency, stock)
+            VALUES (${productPlaceholders})`,
+      args: productArgs },
+    { sql: `INSERT INTO product_events (id, product_id, event_type, previous_value, new_value, created_at)
+            VALUES (${eventPlaceholders})`,
+      args: eventArgs }
+  ]
+
+  if (product.codes.length > 0) {
+    const args: InArgs = []
+    const placeholders: string[] = []
+
+    for (const { code, product_id, type, is_main } of product.codes) {
+      args.push(product_id, code, type, is_main ? '1' : '0')
+      placeholders.push('(?, ?, ?, ?)')
+    }
+    
+    stmts.push({
+      sql: `INSERT INTO product_codes (product_id, code, type, is_main)
+            VALUES ${placeholders.join(', ')}`,
+      args: args
+    })
+  }
+
+  await db.batch(stmts, 'write')
 }
