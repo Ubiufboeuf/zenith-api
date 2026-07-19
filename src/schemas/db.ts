@@ -1,6 +1,6 @@
 import { CURRENCIES } from '@/lib/constants/currencies'
 import { PAYMENT_METHODS } from '@/lib/constants/payments'
-import { PRODUCT_EVENTS, PRODUCT_VALID_CODES } from '@/lib/constants/products'
+import { PRODUCT_EVENT_LIST, PRODUCT_VALID_CODES } from '@/lib/constants/products'
 import { DEFAULT_IVA_RATE, SALE_DOCUMENT_TYPE, SALE_PAYMENT_STATUS, SALE_STATUS, SALE_TYPE } from '@/lib/constants/sales'
 import z from 'zod'
 
@@ -29,7 +29,7 @@ export const ProductCodesRowSchema = z.object({
 export const ProductEventsRowSchema = z.object({
   id: z.uuid({ version: 'v4' }).default(() => crypto.randomUUID()),
   product_id: z.uuid({ version: 'v4' }),
-  event_type: z.enum(PRODUCT_EVENTS),
+  event_type: z.enum(PRODUCT_EVENT_LIST),
   previous_value: z.string(),
   new_value: z.string(),
   created_at: z.iso.datetime()
