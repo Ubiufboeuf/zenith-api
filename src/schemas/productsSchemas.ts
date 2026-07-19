@@ -11,13 +11,34 @@ export const ProductCodeSchema = ProductCodesRowSchema.extend({
 })
 
 export const ProductSchema = ProductsRowSchema.extend({
-  codes: z.array(ProductCodeSchema)
+  codes: z.array(ProductCodeSchema).default([])
 })
 
 export const ProductWithEventsSchema = ProductsRowSchema.extend({
-  events: z.array(ProductEventsRowSchema)
+  events: z.array(ProductEventsRowSchema).default([])
 })
 
 export const ProductFullSchema = ProductSchema.extend({
-  events: z.array(ProductEventsRowSchema)
+  events: z.array(ProductEventsRowSchema).default([])
+})
+
+export const CreateProductSchema = ProductSchema
+  .partial()
+  .required({ id: true })
+  .extend({
+    codes: z.array(
+      ProductCodeSchema
+        .omit({ id: true })
+        .partial({ is_main: true })
+    )
+    .default([])
+    .optional()
+  })
+
+export const StrictCreateProductSchema = CreateProductSchema.required({
+  title: true,
+  cost_price: true,
+  cost_currency: true,
+  sale_price: true,
+  sale_currency: true
 })
