@@ -161,7 +161,7 @@ export async function getProductsResolvingCodes (codes: string[]): Promise<Produ
   const placeholders = codes.map(() => '?').join(', ')
 
   const productsQuery = `
-    SELECT p.*, pc.* FROM products p
+    SELECT p.*, pc.id AS code_id, pc.* FROM products p
     INNER JOIN product_codes pc ON p.id = pc.product_id
     WHERE p.id IN (
       SELECT DISTINCT product_id FROM product_codes WHERE code IN (${placeholders})
@@ -179,6 +179,7 @@ export async function getProductsResolvingCodes (codes: string[]): Promise<Produ
     const codeValidation = ProductCodeSchema.safeParse(row)
     if (!codeValidation.success) continue
     const validCode = codeValidation.data
+    validCode.id = row.code_id as string
 
     if (!productsMap.has(prodId)) {
       productsMap.set(prodId, { prodRow: row, codes: [] })
@@ -312,11 +313,12 @@ async function createNewProduct (product: StrictCreateProduct): Promise<void> {
       args: eventArgs }
   ]
 
-  if (product.codes.length > 0) {
+  const { codes = [] } = product
+  if (codes.length > 0) {
     const args: InArgs = []
     const placeholders: string[] = []
 
-    for (const { code, product_id, type, is_main } of product.codes) {
+    for (const { code, product_id, type, is_main } of codes) {
       args.push(product_id, code, type, is_main ? '1' : '0')
       placeholders.push('(?, ?, ?, ?)')
     }
