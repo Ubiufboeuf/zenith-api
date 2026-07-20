@@ -1,5 +1,5 @@
 import z from 'zod'
-import { ProductCodesRowSchema, ProductEventsRowSchema, ProductsRowSchema } from './db'
+import { ProductCodesRowSchema, ProductEventsRowSchema, ProductsRowSchema } from './dbSchemas'
 
 export const ProductCodeSchema = ProductCodesRowSchema.extend({
   is_main: z.boolean().catch((ctx: unknown) => {

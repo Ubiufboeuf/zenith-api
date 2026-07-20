@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ProductEventsRowSchema } from '@/schemas/db'
+import { ProductEventsRowSchema } from '@/schemas/dbSchemas'
 import { ProductCodeSchema } from '@/schemas/productsSchemas'
 import type { ProductCode, ProductEvent } from '@/types/productsTypes'
 import type { Row } from '@libsql/client'

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { ProductCodesRowSchema, ProductEventsRowSchema } from '@/schemas/db'
+import { ProductCodesRowSchema, ProductEventsRowSchema } from '@/schemas/dbSchemas'
 import { StrictCreateProductSchema } from '@/schemas/productsSchemas'
 import type { Field, FieldIssues } from '@/types/errorTypes'
 import { toPascalCase } from '@/utils/strings'

@@ -1,5 +1,5 @@
 import z from 'zod'
-import { SaleDetailsRowSchema, SalePaymentsRowSchema, SalesRowSchema } from './db'
+import { SaleDetailsRowSchema, SalePaymentsRowSchema, SalesRowSchema } from './dbSchemas'
 
 export const SaleSchema = SalesRowSchema
 

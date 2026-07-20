@@ -1,4 +1,4 @@
-import type { ProductEventsRowSchema } from '@/schemas/db'
+import type { ProductEventsRowSchema } from '@/schemas/dbSchemas'
 import type { ProductCodeSchema, ProductWithEventsSchema, ProductFullSchema, ProductSchema, CreateProductSchema, StrictCreateProductSchema, ProductWithCodesSchema } from '@/schemas/productsSchemas'
 import type z from 'zod'
 import type { Cursor, Pagination, PaginationRequestQuery } from './cursorTypes'
