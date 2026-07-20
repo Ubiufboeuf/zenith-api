@@ -1,17 +1,18 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import z from 'zod'
 import { ProductCodesRowSchema, ProductEventsRowSchema, ProductsRowSchema } from './db'
 
 export const ProductCodeSchema = ProductCodesRowSchema.extend({
-  is_main: z.boolean().catch((ctx: any) => {
+  is_main: z.boolean().catch((ctx: unknown) => {
     if (!ctx) return false
     if (typeof ctx === 'number') return ctx === 1
     return ctx === '1'
   })
 })
 
-export const ProductSchema = ProductsRowSchema.extend({
-  codes: z.array(ProductCodeSchema).default([])
+export const ProductSchema = ProductsRowSchema
+
+export const ProductWithCodesSchema = ProductsRowSchema.extend({
+  codes: z.array(ProductCodesRowSchema).default([])
 })
 
 export const ProductWithEventsSchema = ProductsRowSchema.extend({
@@ -19,6 +20,7 @@ export const ProductWithEventsSchema = ProductsRowSchema.extend({
 })
 
 export const ProductFullSchema = ProductSchema.extend({
+  codes: z.array(ProductCodesRowSchema).default([]),
   events: z.array(ProductEventsRowSchema).default([])
 })
 

@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-assignment */
 import { db } from '@/config/db'
-import type { CreateProduct, CreateProductResult, Product, ProductCode, ProductsServiceProps, ProductsServiceResult, StrictCreateProduct } from '@/types/productsTypes'
+import type { CreateProduct, CreateProductResult, Product, ProductCode, ProductsQueryOptions, ProductsServiceResult, StrictCreateProduct } from '@/types/productsTypes'
 import type { InArgs, InStatement, Row } from '@libsql/client'
 import { createCursor, getVisibleRows } from './cursorService'
 import { ProductsRowSchema } from '@/schemas/db'
@@ -14,7 +14,7 @@ import { getErrorsDetails } from '@/errors'
 import type { DatabaseStatements } from '@/types/connectionTypes'
 // import { indexArray } from '@/lib/indexArray'
 
-function getProductsStatements (options: ProductsServiceProps): DatabaseStatements {
+function getProductsStatements (options: ProductsQueryOptions): DatabaseStatements {
   const { cursor, limit } = options
 
   const conditions: string[] = []
@@ -44,22 +44,15 @@ function getProductsStatements (options: ProductsServiceProps): DatabaseStatemen
   return stmts
 }
 
-export async function getProductsService ({ cursor, limit, code, since }: ProductsServiceProps): Promise<ProductsServiceResult | Product[]> {
+export async function getProductsService ({ cursor, limit, code, since }: ProductsQueryOptions): Promise<ProductsServiceResult> {
   if (!code) {
-    const { products, nextCursor } = await getProducts({ cursor, limit, since })
-
-    return {
-      products,
-      nextCursor
-    }
+    return getProducts({ cursor, limit, since })
   }
 
-  const products = await getProductsByCode(code)
-
-  return products
+  return getProductsByCode(code)
 }
 
-export async function getProducts ({ cursor, limit, since }: ProductsServiceProps): Promise<ProductsServiceResult> {
+export async function getProducts ({ cursor, limit, since }: ProductsQueryOptions): Promise<ProductsServiceResult> {
   const stmts = getProductsStatements({ cursor, limit: limit + 1, since })
   const batchResult = await db.batch(stmts)
 
