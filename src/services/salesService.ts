@@ -64,7 +64,7 @@ export function getSalesQueryOptions (query: GetSalesRequestQuery): SalesExtende
 export function getSaleIncludeOptions (query: GetSalesRequestQuery, queryHasPaymentMethod: boolean): SaleInclude {
   const include = { ...SALE_INCLUDE }
 
-  if (!query.include && !queryHasPaymentMethod) return SALE_INCLUDE
+  if (!query.include && !queryHasPaymentMethod) return include
 
   const items = query.include?.split(',') ?? []
 

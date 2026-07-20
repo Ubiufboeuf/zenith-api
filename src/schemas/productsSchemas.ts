@@ -12,7 +12,7 @@ export const ProductCodeSchema = ProductCodesRowSchema.extend({
 export const ProductSchema = ProductsRowSchema
 
 export const ProductWithCodesSchema = ProductsRowSchema.extend({
-  codes: z.array(ProductCodesRowSchema).default([])
+  codes: z.array(ProductCodeSchema).default([])
 })
 
 export const ProductWithEventsSchema = ProductsRowSchema.extend({

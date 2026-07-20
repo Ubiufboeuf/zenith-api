@@ -277,7 +277,7 @@ export async function createProductService (createProduct: CreateProduct): Promi
 }
 
 async function createNewProduct (product: StrictCreateProduct): Promise<void> {
-  const now = Temporal.Now.instant().toZonedDateTimeISO('UTC').toString()
+  const now = Temporal.Now.instant().toString()
   
   const productArgs: InArgs = [
     product.id,
@@ -319,12 +319,12 @@ async function createNewProduct (product: StrictCreateProduct): Promise<void> {
     const placeholders: string[] = []
 
     for (const { code, product_id, type, is_main } of codes) {
-      args.push(product_id, code, type, is_main ? '1' : '0')
-      placeholders.push('(?, ?, ?, ?)')
+      args.push(crypto.randomUUID(), product_id, code, type, is_main ? '1' : '0')
+      placeholders.push('(?, ?, ?, ?, ?)')
     }
     
     stmts.push({
-      sql: `INSERT INTO product_codes (product_id, code, type, is_main)
+      sql: `INSERT INTO product_codes (id, product_id, code, type, is_main)
             VALUES ${placeholders.join(', ')}`,
       args: args
     })
