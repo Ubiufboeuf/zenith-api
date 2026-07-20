@@ -3,8 +3,8 @@ import type { Cursor } from './cursorTypes'
 import type { SaleDetailSchema, SaleFullSchema, SalePaymentSchema, SaleSchema, SaleWithDetailsSchema, SaleWithPaymentsSchema } from '@/schemas/salesSchemas'
 import type { Request } from 'express'
 import type { Currency } from './currenciesTypes'
-import type { SALE_INCLUDE } from '@/lib/constants/sales'
-import type { PAYMENT_METHODS } from '@/lib/constants/payments'
+import type { SALE_INCLUDE } from '@/lib/constants/salesConstants'
+import type { PAYMENT_METHODS } from '@/lib/constants/paymentsConstants'
 
 export type Sale = z.infer<typeof SaleSchema>
 export type SaleDetail = z.infer<typeof SaleDetailSchema>

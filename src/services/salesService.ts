@@ -7,8 +7,8 @@ import type { InArgs, InStatement } from '@libsql/client'
 import type { DatabaseStatements } from '@/types/connectionTypes'
 import { indexArray } from '@/lib/indexArray'
 import { isEveryEnabled, isSomeEnabled, toEnableAll } from '@/utils/objects'
-import { PAYMENT_METHODS } from '@/lib/constants/payments'
-import { SALE_INCLUDE } from '@/lib/constants/sales'
+import { PAYMENT_METHODS } from '@/lib/constants/paymentsConstants'
+import { SALE_INCLUDE } from '@/lib/constants/salesConstants'
 import { HttpError } from '@/errors/HttpError'
 
 export function getSalePaymentMethod (query: GetSalesRequestQuery): PaymentMethods {

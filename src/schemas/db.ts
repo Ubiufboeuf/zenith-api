@@ -1,7 +1,7 @@
-import { CURRENCIES } from '@/lib/constants/currencies'
-import { PAYMENT_METHODS } from '@/lib/constants/payments'
-import { PRODUCT_EVENT_LIST, PRODUCT_VALID_CODES } from '@/lib/constants/products'
-import { DEFAULT_IVA_RATE, SALE_DOCUMENT_TYPE, SALE_PAYMENT_STATUS, SALE_STATUS, SALE_TYPE } from '@/lib/constants/sales'
+import { CURRENCIES } from '@/lib/constants/currenciesConstants'
+import { PAYMENT_METHODS } from '@/lib/constants/paymentsConstants'
+import { PRODUCT_EVENT_LIST, PRODUCT_VALID_CODES } from '@/lib/constants/productsConstants'
+import { DEFAULT_IVA_RATE, SALE_DOCUMENT_TYPE, SALE_PAYMENT_STATUS, SALE_STATUS, SALE_TYPE } from '@/lib/constants/salesConstants'
 import z from 'zod'
 
 export const ProductsRowSchema = z.object({

@@ -4,7 +4,7 @@ import type z from 'zod'
 import type { Cursor, Pagination, PaginationRequestQuery } from './cursorTypes'
 import type { Request } from 'express'
 import type { CreateResult } from './serviceTypes'
-import type { PRODUCT_INCLUDE } from '@/lib/constants/products'
+import type { PRODUCT_INCLUDE } from '@/lib/constants/productsConstants'
 
 // === Schemas ===
 export type Product = z.infer<typeof ProductSchema>
