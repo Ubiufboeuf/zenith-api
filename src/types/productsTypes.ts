@@ -1,31 +1,36 @@
 import type { ProductEventsRowSchema } from '@/schemas/db'
-import type { ProductCodeSchema, ProductWithEventsSchema, ProductFullSchema, ProductSchema, CreateProductSchema, StrictCreateProductSchema } from '@/schemas/productsSchemas'
+import type { ProductCodeSchema, ProductWithEventsSchema, ProductFullSchema, ProductSchema, CreateProductSchema, StrictCreateProductSchema, ProductWithCodesSchema } from '@/schemas/productsSchemas'
 import type z from 'zod'
 import type { Cursor, Pagination, PaginationRequestQuery } from './cursorTypes'
 import type { Request } from 'express'
 import type { CreateResult } from './serviceTypes'
+import type { PRODUCT_INCLUDE } from '@/lib/constants/products'
 
 // === Schemas ===
 export type Product = z.infer<typeof ProductSchema>
 export type ProductCode = z.infer<typeof ProductCodeSchema>
 export type ProductEvent = z.infer<typeof ProductEventsRowSchema>
-export type ProductWithCodes = z.infer<typeof ProductWithEventsSchema>
+export type ProductWithCodes = z.infer<typeof ProductWithCodesSchema>
 export type ProductWithEvents = z.infer<typeof ProductWithEventsSchema>
 export type ProductFull = z.infer<typeof ProductFullSchema>
 export type CreateProduct = z.infer<typeof CreateProductSchema>
 export type StrictCreateProduct = z.infer<typeof StrictCreateProductSchema>
 
+// === Constants ===
+export type ProductInclude = typeof PRODUCT_INCLUDE
+export type ProductIncludeOption = keyof ProductInclude
+
 // === HTTP ===
 export type GetProductsRequest = Request<null, null, null, GetProductsRequestQuery>
 export interface GetProductsRequestQuery extends PaginationRequestQuery {
-  // include?: string
+  include?: string
   code?: string
   since?: string
 }
 
 // === Props ===
 export interface ProductsQueryOptions extends Pagination {
-  // include?: Record<ProductIncludeOption, boolean>
+  include: Record<ProductIncludeOption, boolean>
   code?: string
   since?: string
 }

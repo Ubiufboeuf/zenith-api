@@ -8,3 +8,7 @@ export const PRODUCT_EVENTS = {
 } as const
 export const PRODUCT_EVENT_LIST = Object.values(PRODUCT_EVENTS)
 export const INITIAL_EVENT_VALUE = 'none'
+export const PRODUCT_INCLUDE = {
+  codes: false,
+  events: false
+}

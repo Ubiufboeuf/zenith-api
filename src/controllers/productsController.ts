@@ -1,5 +1,6 @@
-import { createPagination, cursorToB64 } from '@/services/cursorService'
-import { createProductService, getProductById, getProductsResolvingCodes, getProductsService } from '@/services/productsService'
+import { HttpError } from '@/errors/HttpError'
+import { cursorToB64 } from '@/services/cursorService'
+import { createProductService, getProductById, getProductsQueryOptions, getProductsResolvingCodes, getProductsService } from '@/services/productsService'
 import type { GetProductsRequest } from '@/types/productsTypes'
 import { getBody } from '@/utils/request'
 import { failure, success } from '@/utils/response'
@@ -7,19 +8,18 @@ import { validateProductCreation } from '@/validations/productsValidations'
 import type { Request, Response } from 'express'
 
 export async function getProducts (req: GetProductsRequest, res: Response) {
-  const pagination = createPagination(req.query)
-  if (!pagination.success) {
-    return failure(res, pagination.error, { status: pagination.status })
+  let options
+  try {
+    options = getProductsQueryOptions(req.query)
+  } catch (err) {
+    if (err instanceof HttpError) {
+      return failure(res, err.message, { status: err.statusCode })
+    }
+
+    return failure(res, 'Error interno del servidor', { status: 500 })
   }
 
-  const { code, since } = req.query
-
-  const result = await getProductsService({
-    limit: pagination.limit,
-    cursor: pagination.cursor,
-    code,
-    since
-  })
+  const result = await getProductsService(options)
 
   if ('nextCursor' in result) { 
     return success(res, {

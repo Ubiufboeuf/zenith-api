@@ -1,21 +1,65 @@
 /* eslint-disable no-useless-assignment */
 import { db } from '@/config/db'
-import type { CreateProduct, CreateProductResult, Product, ProductCode, ProductsQueryOptions, ProductsServiceResult, StrictCreateProduct } from '@/types/productsTypes'
+import type { CreateProduct, CreateProductResult, GetProductsRequestQuery, Product, ProductCode, ProductInclude, ProductIncludeOption, ProductsQueryOptions, ProductsServiceResult, ProductWithCodes, ProductWithEvents, StrictCreateProduct } from '@/types/productsTypes'
 import type { InArgs, InStatement, Row } from '@libsql/client'
-import { createCursor, getVisibleRows } from './cursorService'
+import { createCursor, createPagination, getVisibleRows } from './cursorService'
 import { ProductsRowSchema } from '@/schemas/db'
 import { ProductCodeSchema, ProductSchema } from '@/schemas/productsSchemas'
 import { validateStrictProductCreation } from '@/validations/productsValidations'
 import { getProductFieldIssues } from '@/errors/productErrors'
 import { ZodError } from 'zod'
-import { INITIAL_EVENT_VALUE, PRODUCT_EVENTS } from '@/lib/constants/products'
+import { INITIAL_EVENT_VALUE, PRODUCT_EVENTS, PRODUCT_INCLUDE } from '@/lib/constants/products'
 import { Temporal } from 'temporal-polyfill'
 import { getErrorsDetails } from '@/errors'
 import type { DatabaseStatements } from '@/types/connectionTypes'
-// import { indexArray } from '@/lib/indexArray'
+import { HttpError } from '@/errors/HttpError'
+import { toEnableAll } from '@/utils/objects'
+import { indexCodes, indexEvents } from '@/lib/indexArray'
+
+export function getProductsQueryOptions (query: GetProductsRequestQuery): ProductsQueryOptions {
+  const pagination = createPagination(query)
+  if (!pagination.success) {
+    throw new HttpError(pagination.error, null, 400)
+  }
+
+  const { code, since } = query
+
+  const include = getProductIncludeOptions(query)
+
+  const queryOptions: ProductsQueryOptions = {
+    limit: pagination.limit,
+    cursor: pagination.cursor,
+    code,
+    since,
+    include
+  }
+  
+  return queryOptions
+}
+
+function getProductIncludeOptions (query: GetProductsRequestQuery): ProductInclude {
+  const include = { ...PRODUCT_INCLUDE }
+  if (!query.include) return include
+  
+  const items = query.include.split(',')
+
+  if (items.includes('all')) {
+    return toEnableAll(include) as ProductInclude
+  }
+
+  for (const item of items) {
+    if (!item) continue
+    const value = item.trim()
+
+    if (!(value in include)) continue
+    include[value as ProductIncludeOption] = true
+  }
+
+  return include
+}
 
 function getProductsStatements (options: ProductsQueryOptions): DatabaseStatements {
-  const { cursor, limit } = options
+  const { cursor, limit, include } = options
 
   const conditions: string[] = []
   const productsArgs: InArgs = []
@@ -39,26 +83,42 @@ function getProductsStatements (options: ProductsQueryOptions): DatabaseStatemen
 
   productsArgs.push(limit)
 
+  const codesQuery = `
+    SELECT pc.*, pc.id AS code_id FROM product_codes pc
+    WHERE product_id IN (SELECT id FROM (${productsQuery}))
+  `
+
+  const eventsQuery = `
+    SELECT pe.*, pe.id AS event_id FROM product_events pe
+    WHERE product_id IN (SELECT id FROM (${productsQuery}))
+  `
+  
   const stmts: DatabaseStatements = [{ sql: productsQuery, args: productsArgs }]
+
+  if (include.codes) stmts.push({ sql: codesQuery, args: productsArgs })
+  if (include.events) stmts.push({ sql: eventsQuery, args: productsArgs })
 
   return stmts
 }
 
-export async function getProductsService ({ cursor, limit, code, since }: ProductsQueryOptions): Promise<ProductsServiceResult> {
+export async function getProductsService (options: ProductsQueryOptions): Promise<ProductsServiceResult> {
+  const { code } = options
+  
   if (!code) {
-    return getProducts({ cursor, limit, since })
+    return getProducts(options)
   }
 
   return getProductsByCode(code)
 }
 
-export async function getProducts ({ cursor, limit, since }: ProductsQueryOptions): Promise<ProductsServiceResult> {
-  const stmts = getProductsStatements({ cursor, limit: limit + 1, since })
+export async function getProducts ({ cursor, limit, include, ...rest }: ProductsQueryOptions): Promise<ProductsServiceResult> {
+  const stmts = getProductsStatements({ cursor, limit: limit + 1, include, ...rest })
   const batchResult = await db.batch(stmts)
 
   let resultIdx = 0
   const productsResult = batchResult[resultIdx++]
-  // const codesResult = include.codes ? batchResult[resultIdx++] : null
+  const codesResult = include.codes ? batchResult[resultIdx++] : null
+  const eventsResult = include.events ? batchResult[resultIdx++] : null
 
   const { visibleRows: productsRows, hasMore } = getVisibleRows(productsResult?.rows, limit)
 
@@ -66,10 +126,12 @@ export async function getProducts ({ cursor, limit, since }: ProductsQueryOption
     return { nextCursor: null, products: [] }
   }
   
-  // const codesRows = codesResult?.rows ?? []
+  const codesRows = codesResult?.rows ?? []
+  const eventsRows = eventsResult?.rows ?? []
   
-  // const indexedCodes = indexArray(codesRows as unknown as ProductCode[], 'product_id')
-  
+  const indexedCodes = indexCodes(codesRows)
+  const indexedEvents = indexEvents(eventsRows)
+
   const products: Product[] = []
   
   for (const productRow of productsRows) {
@@ -78,11 +140,17 @@ export async function getProducts ({ cursor, limit, since }: ProductsQueryOption
 
     const product = productValidation.data
 
-    // if (include.codes) {
-    //   const codes = indexedCodes.get(product.id) ?? []
+    if (include.codes) {
+      const codes = indexedCodes.get(product.id) ?? []
 
-    //   ;(product as ProductWithCodes).codes = codes
-    // }
+      ;(product as ProductWithCodes).codes = codes
+    }
+
+    if (include.events) {
+      const events = indexedEvents.get(product.id) ?? []
+
+      ;(product as ProductWithEvents).events = events
+    }
     
     products.push(product)
   }
