@@ -1,5 +1,6 @@
 import type { Cursor, PaginationRequestQuery, PaginationResult } from '@/types/cursorTypes'
 import { validateLimit } from '@/validations/paginationValidations'
+import type { Row } from '@libsql/client'
 
 export function createCursor (lastId?: string | null): Cursor {
   return {
@@ -50,4 +51,10 @@ export function createPagination (query: PaginationRequestQuery): PaginationResu
     limit,
     cursor
   }
+}
+
+export function getVisibleRows (rows: Row[] = [], limit: number = 0): { visibleRows: Row[], hasMore: boolean } {
+  const hasMore = rows.length > limit
+  const visibleRows = hasMore ? rows.slice(0, limit) : rows
+  return { visibleRows, hasMore }
 }
