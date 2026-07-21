@@ -28,11 +28,21 @@ export interface GetProductsRequestQuery extends PaginationRequestQuery {
   since?: string
 }
 
+export type GetProductRequest = Request<{ id: string }, null, null, GetProductRequestQuery>
+export interface GetProductRequestQuery {
+  include?: string
+}
+
 // === Props ===
 export interface ProductsQueryOptions extends Pagination {
   include: Record<ProductIncludeOption, boolean>
   code?: string
   since?: string
+}
+
+export interface ProductQueryOptions {
+  id: string
+  include: Record<ProductIncludeOption, boolean>
 }
 
 // === Results ===

@@ -1,7 +1,7 @@
 import { HttpError } from '@/errors/HttpError'
 import { cursorToB64 } from '@/services/cursorService'
-import { createProductService, getProductById, getProductsQueryOptions, getProductsResolvingCodes, getProductsService } from '@/services/productsService'
-import type { GetProductsRequest } from '@/types/productsTypes'
+import { createProductService, getProductById, getProductIncludeOptions, getProductsQueryOptions, getProductsResolvingCodes, getProductsService } from '@/services/productsService'
+import type { GetProductRequest, GetProductsRequest } from '@/types/productsTypes'
 import { getBody } from '@/utils/request'
 import { failure, success } from '@/utils/response'
 import { validateProductCreation } from '@/validations/productsValidations'
@@ -58,10 +58,12 @@ export async function createProduct (req: Request, res: Response) {
   success(res, { product, msg: '¡Producto creado exitosamente!' })
 }
 
-export async function getProduct (req: Request<{ id: string }>, res: Response) {
+export async function getProduct (req: GetProductRequest, res: Response) {
   const { id } = req.params
 
-  const product = await getProductById(id)
+  const include = getProductIncludeOptions(req.query)
+
+  const product = await getProductById({ id, include })
   if (!product) {
     return failure(res, 'No se encontró el producto', { status: 404 })
   }

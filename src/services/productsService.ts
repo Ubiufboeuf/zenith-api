@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-assignment */
 import { db } from '@/config/db'
-import type { CreateProduct, CreateProductResult, GetProductsRequestQuery, Product, ProductCode, ProductInclude, ProductIncludeOption, ProductsQueryOptions, ProductsServiceResult, ProductWithCodes, ProductWithEvents, StrictCreateProduct } from '@/types/productsTypes'
+import type { CreateProduct, CreateProductResult, GetProductRequestQuery, GetProductsRequestQuery, Product, ProductCode, ProductEvent, ProductInclude, ProductIncludeOption, ProductQueryOptions, ProductsQueryOptions, ProductsServiceResult, ProductWithCodes, ProductWithEvents, StrictCreateProduct } from '@/types/productsTypes'
 import type { InArgs, InStatement, Row } from '@libsql/client'
 import { createCursor, createPagination, getVisibleRows } from './cursorService'
 import { ProductsRowSchema } from '@/schemas/dbSchemas'
@@ -15,6 +15,7 @@ import type { DatabaseStatements } from '@/types/connectionTypes'
 import { HttpError } from '@/errors/HttpError'
 import { toEnableAll } from '@/utils/objects'
 import { indexCodes, indexEvents } from '@/lib/indexArray'
+import { normalizeCodeRow, normalizeEventRow } from '@/lib/normalizers'
 
 export function getProductsQueryOptions (query: GetProductsRequestQuery): ProductsQueryOptions {
   const pagination = createPagination(query)
@@ -37,7 +38,7 @@ export function getProductsQueryOptions (query: GetProductsRequestQuery): Produc
   return queryOptions
 }
 
-function getProductIncludeOptions (query: GetProductsRequestQuery): ProductInclude {
+export function getProductIncludeOptions (query: GetProductsRequestQuery | GetProductRequestQuery): ProductInclude {
   const include = { ...PRODUCT_INCLUDE }
   if (!query.include) return include
   
@@ -167,38 +168,73 @@ export async function getProductsService ({ cursor, limit, include, ...rest }: P
   }
 }
 
-export async function getCodes (productsIds: string[]): Promise<Map<string, ProductCode[]>> {
-  const codes: Map<string, ProductCode[]> = new Map()
+function getProductStatements (options: ProductQueryOptions): DatabaseStatements {
+  const { id, include } = options
 
-  const placeholders = productsIds.map(() => '?').join(', ')
-  const codesResult = await db.execute(
-    `SELECT * FROM product_codes WHERE product_id IN (${placeholders})`,
-    productsIds
-  )
-  const { rows } = codesResult
+  const productQuery = `
+    SELECT * FROM products
+    WHERE id = ?
+  `
 
-  for (const codeRow of rows) {
-    const prodId = codeRow.product_id as string
-    if (!codes.has(prodId)) codes.set(prodId, [])
-    
-    const code = ProductCodeSchema.safeParse(codeRow)
-    if (!code.success) continue
+  const codesQuery = `
+    SELECT pc.*, pc.id AS code_id FROM product_codes pc
+    WHERE product_id IN (SELECT id FROM (${productQuery}))
+  `
+  
+  const eventsQuery = `
+    SELECT pe.*, pe.id AS event_id FROM product_events pe
+    WHERE product_id IN (SELECT id FROM (${productQuery}))
+  `
 
-    codes.get(prodId)?.push(code.data)
-  }
+  const stmts: DatabaseStatements = [{ sql: productQuery, args: [id] }]
 
-  return codes
+  if (include.codes) stmts.push({ sql: codesQuery, args: [id] })
+  if (include.events) stmts.push({ sql: eventsQuery, args: [id] })
+  
+  return stmts
 }
 
-export async function getProductById (id: string): Promise<Product | undefined> {
-  const query = 'SELECT * FROM products WHERE id = ?'
-  const result = await db.execute(query, [id])
-  const row = result.rows[0]
+export async function getProductById ({ id, include, ...rest }: ProductQueryOptions): Promise<Product | undefined> {
+  const stmts = getProductStatements({ id, include, ...rest })
+  const batchResult = await db.batch(stmts)
 
-  if (!row) return
+  let resultIdx = 0
+  const productResult = batchResult[resultIdx++]
+  const codesResult = include.codes ? batchResult[resultIdx++] : null
+  const eventsResult = include.events ? batchResult[resultIdx++] : null
+
+  const productRow = productResult?.rows[0]
+  const codesRows = codesResult?.rows ?? []
+  const eventsRows = eventsResult?.rows ?? []
+
+  const productValidation = ProductSchema.safeParse(productRow)
+  if (!productValidation.success) return
+
+  const product = productValidation.data
   
-  const codes = await getCodes([id])
-  const product = formProductWithCodes(row, codes.get(id) || [])
+  if (include.codes) {
+    const codes: ProductCode[] = []
+    
+    for (const codeRow of codesRows) {
+      const code = normalizeCodeRow(codeRow, 'high')
+      if (!code) continue
+      codes.push(code)
+    }
+    
+    ;(product as ProductWithCodes).codes = codes
+  }
+
+  if (include.events) {
+    const events: ProductEvent[] = []
+    
+    for (const eventRow of eventsRows) {
+      const event = normalizeEventRow(eventRow, 'high')
+      if (!event) continue
+      events.push(event)
+    }
+    
+    ;(product as ProductWithEvents).events = events
+  }
 
   return product
 }
