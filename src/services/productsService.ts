@@ -59,8 +59,9 @@ function getProductIncludeOptions (query: GetProductsRequestQuery): ProductInclu
 }
 
 function getProductsStatements (options: ProductsQueryOptions): DatabaseStatements {
-  const { cursor, limit, include } = options
+  const { cursor, limit, include, code } = options
 
+  const joins: string[] = []
   const conditions: string[] = []
   const productsArgs: InArgs = []
 
@@ -70,12 +71,23 @@ function getProductsStatements (options: ProductsQueryOptions): DatabaseStatemen
     productsArgs.push(lastId)
   }
 
+  if (code) {
+    joins.push('product_codes pc ON pc.product_id = p.id')
+    conditions.push('pc.code = ?')
+    productsArgs.push(code)
+  }
+
   const whereClause = conditions.length > 0
     ? `WHERE ${conditions.join(' AND ')}`
     : ''
 
+  const joinTables = joins.length > 0
+    ? `INNER JOIN ${joins.join(' AND ')}`
+    : ''
+
   const productsQuery = `
     SELECT p.* FROM products p
+    ${joinTables}
     ${whereClause}
     ORDER BY p.id ASC
     LIMIT ?
@@ -101,17 +113,7 @@ function getProductsStatements (options: ProductsQueryOptions): DatabaseStatemen
   return stmts
 }
 
-export async function getProductsService (options: ProductsQueryOptions): Promise<ProductsServiceResult> {
-  const { code } = options
-  
-  if (!code) {
-    return getProducts(options)
-  }
-
-  return getProductsByCode(code)
-}
-
-export async function getProducts ({ cursor, limit, include, ...rest }: ProductsQueryOptions): Promise<ProductsServiceResult> {
+export async function getProductsService ({ cursor, limit, include, ...rest }: ProductsQueryOptions): Promise<ProductsServiceResult> {
   const stmts = getProductsStatements({ cursor, limit: limit + 1, include, ...rest })
   const batchResult = await db.batch(stmts)
 
@@ -163,30 +165,6 @@ export async function getProducts ({ cursor, limit, include, ...rest }: Products
     products,
     nextCursor
   }
-}
-
-export async function getProductsByCode (code: string): Promise<Product[]> {
-  const productsQuery = `
-    SELECT * FROM products p
-    INNER JOIN product_codes pc ON p.id = pc.product_id
-    WHERE pc.code = ?
-  `
-
-  const productsResult = await db.execute(productsQuery, [code])
-  const productsRows = productsResult.rows
-
-  const products: Product[] = []
-  const codes = await getCodes(productsRows.map((r) => r.id as string))
-
-  for (const productRow of productsRows) {
-    const associatedCodes = codes.get(productRow.id as string) || []
-    const product = formProductWithCodes(productRow, associatedCodes)
-    if (product) {
-      products.push(product)
-    }
-  }
-
-  return products
 }
 
 export async function getCodes (productsIds: string[]): Promise<Map<string, ProductCode[]>> {
