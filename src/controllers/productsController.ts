@@ -1,6 +1,6 @@
 import { HttpError } from '@/errors/HttpError'
 import { cursorToB64 } from '@/services/cursorService'
-import { createProductService, getProductById, getProductIncludeOptions, getProductsQueryOptions, getProductsResolvingCodes, getProductsService } from '@/services/productsService'
+import { createProductService, getProductById, getProductCodesService, getProductIncludeOptions, getProductsQueryOptions, getProductsResolvingCodes, getProductsService } from '@/services/productsService'
 import type { GetProductRequest, GetProductsRequest } from '@/types/productsTypes'
 import { getBody } from '@/utils/request'
 import { failure, success } from '@/utils/response'
@@ -69,6 +69,21 @@ export async function getProduct (req: GetProductRequest, res: Response) {
   }
   
   success(res, { product })
+}
+
+export async function getProductCodes (req: GetProductRequest, res: Response) {
+  const { id } = req.params
+
+  const result = await getProductCodesService(id, req.query)
+
+  if ('nextCursor' in result) {
+    return success(res, {
+      codes: result.codes,
+      nextCursor: result.nextCursor ? cursorToB64(result.nextCursor) : null
+    })
+  }
+  
+  return success(res, { codes: result })
 }
 
 export async function resolveCodes (req: Request, res: Response) {

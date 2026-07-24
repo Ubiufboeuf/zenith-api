@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-assignment */
 import { db } from '@/config/db'
-import type { CreateProduct, CreateProductResult, GetProductRequestQuery, GetProductsRequestQuery, Product, ProductCode, ProductEvent, ProductInclude, ProductIncludeOption, ProductQueryOptions, ProductsQueryOptions, ProductsServiceResult, ProductWithCodes, ProductWithEvents, StrictCreateProduct } from '@/types/productsTypes'
+import type { CreateProduct, CreateProductResult, GetProductRequest, GetProductRequestQuery, GetProductsRequestQuery, Product, ProductCode, ProductCodesQueryOptions, ProductCodesServiceResult, ProductEvent, ProductInclude, ProductIncludeOption, ProductQueryOptions, ProductsQueryOptions, ProductsServiceResult, ProductWithCodes, ProductWithEvents, StrictCreateProduct } from '@/types/productsTypes'
 import type { InArgs, InStatement, Row } from '@libsql/client'
 import { createCursor, createPagination, getVisibleRows } from './cursorService'
 import { ProductsRowSchema } from '@/schemas/dbSchemas'
@@ -16,6 +16,7 @@ import { HttpError } from '@/errors/HttpError'
 import { toEnableAll } from '@/utils/objects'
 import { indexCodes, indexEvents } from '@/lib/indexArray'
 import { normalizeCodeRow, normalizeEventRow } from '@/lib/normalizers'
+import type { Pagination } from '@/types/cursorTypes'
 
 export function getProductsQueryOptions (query: GetProductsRequestQuery): ProductsQueryOptions {
   const pagination = createPagination(query)
@@ -413,4 +414,81 @@ async function createNewProduct (product: StrictCreateProduct): Promise<void> {
   }
 
   await db.batch(stmts, 'write')
+}
+
+export async function getProductCodesService (id: string, query: GetProductRequestQuery): Promise<ProductCodesServiceResult> {
+  const { cursor, limit } = query
+  const pagination = createPagination({ cursor,  limit })
+
+  if (!pagination.success) {
+    throw new HttpError(pagination.error, null, 400)
+  }
+
+  const { codes, nextCursor } = await getProductCodes(id, pagination)
+  
+  return {
+    codes,
+    nextCursor
+  }
+}
+
+function getProductCodesStatements (id: string, pagination: Pagination): InStatement {
+  const { cursor, limit } = pagination
+
+  const conditions: string[] = ['pc.product_id = ?']
+  const args: InArgs = [id]
+
+  const lastId = cursor?.lastId ?? null
+  if (lastId) {
+    conditions.push('pc.id > ?')
+    args.push(lastId)
+  }
+  
+  const whereClause = conditions.length > 0
+    ? `WHERE ${conditions.join(' AND ')}`
+    : ''
+  
+  const codesQuery = `
+    SELECT pc.* FROM product_codes pc
+    ${whereClause}
+    ORDER BY pc.id ASC
+    LIMIT ?
+  `
+
+  args.push(limit)
+
+  return {
+    sql: codesQuery,
+    args
+  }
+}
+
+export async function getProductCodes (id: string, pagination: Pagination) {
+  const stmt = getProductCodesStatements(id, pagination)
+  const result = await db.execute(stmt)
+
+  const { rows } = result
+  const { visibleRows: codesRows, hasMore } = getVisibleRows(rows, pagination.limit)
+  
+  if (codesRows.length === 0) {
+    return { nextCursor: null, codes: [] }
+  }
+
+  const codes: ProductCode[] = []
+
+  for (const row of codesRows) {
+    const validation = ProductCodeSchema.safeParse(row)
+    if (!validation.success) continue
+
+    codes.push(validation.data)
+  }
+
+  const nextCursor = hasMore
+    ? createCursor(codes.at(-1)?.id)
+    : null
+  
+  return {
+    codes,
+    nextCursor
+  }
 }

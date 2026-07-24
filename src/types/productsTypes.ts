@@ -29,7 +29,7 @@ export interface GetProductsRequestQuery extends PaginationRequestQuery {
 }
 
 export type GetProductRequest = Request<{ id: string }, null, null, GetProductRequestQuery>
-export interface GetProductRequestQuery {
+export interface GetProductRequestQuery extends PaginationRequestQuery {
   include?: string
 }
 
@@ -45,9 +45,18 @@ export interface ProductQueryOptions {
   include: Record<ProductIncludeOption, boolean>
 }
 
+export interface ProductCodesQueryOptions extends Pagination {
+  id: string
+}
+
 // === Results ===
 export type ProductsServiceResult = Product[] | {
   products: Product[]
+  nextCursor: Cursor | null
+}
+
+export type ProductCodesServiceResult = ProductCode[] | {
+  codes: ProductCode[]
   nextCursor: Cursor | null
 }
 
