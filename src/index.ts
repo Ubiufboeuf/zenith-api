@@ -5,6 +5,7 @@ import { PORT } from '@/lib/constants/envConstants'
 import { ROUTES } from './lib/routes'
 import { productsRouter } from './routers/productsRouter'
 import { salesRouter } from './routers/salesRouter'
+import { corsMiddleware } from './config/cors'
 
 async function main () {
   try {
@@ -17,6 +18,7 @@ async function main () {
 
   const app = express()
   app.disable('x-powered-by')
+  app.use(corsMiddleware())
 
   app.use(ROUTES.PRODUCTS, productsRouter)
   app.use(ROUTES.SALES, salesRouter)

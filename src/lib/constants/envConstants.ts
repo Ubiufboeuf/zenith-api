@@ -5,3 +5,5 @@ export const {
   DB = 'prod',
   PORT = 1234
 } = process.env
+
+export const envOrigins = (process.env.ENV_ORIGINS ?? '').split(' ')
