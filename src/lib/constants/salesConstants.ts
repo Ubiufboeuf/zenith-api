@@ -7,3 +7,14 @@ export const SALE_INCLUDE = {
   payments: false,
   details: false
 }
+
+export const SALE_DOCUMENT_CONFIG = {
+  RECEIPT: {
+    name: 'Ticket',
+    code: '102'
+  },
+  INVOICE: {
+    name: 'Factura',
+    code: '111'
+  }
+} as const

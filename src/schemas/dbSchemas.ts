@@ -47,6 +47,8 @@ export const SalesRowSchema = z.object({
   payment_status: z.enum(SALE_PAYMENT_STATUS),
   document_type: z.enum(SALE_DOCUMENT_TYPE),
   sale_type: z.enum(SALE_TYPE),
+  document_serie: z.string(),
+  document_number: z.string(),
   client_id: z.string().nullable(),
   user_id: z.string().nullable()
 })
