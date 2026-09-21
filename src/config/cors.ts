@@ -1,7 +1,7 @@
 import { envOrigins } from '@/lib/constants/envConstants'
 import type { NextFunction, Request, Response } from 'express'
 
-export const corsMiddleware = ({ acceptedOrigins = [] } = {}) => (req: Request, res: Response, next: NextFunction) => {
+export const corsMiddleware = ({ acceptedOrigins = [] }: { acceptedOrigins?: string[] } = {}) => (req: Request, res: Response, next: NextFunction) => {
   const origins: string[] = [...envOrigins, ...acceptedOrigins]
   
   const origin = req.header('origin')

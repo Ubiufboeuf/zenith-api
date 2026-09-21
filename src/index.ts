@@ -18,7 +18,7 @@ async function main () {
 
   const app = express()
   app.disable('x-powered-by')
-  app.use(corsMiddleware())
+  app.use(corsMiddleware({ acceptedOrigins: ['https://zenith-delta-dusky.vercel.app/'] }))
 
   app.use(ROUTES.PRODUCTS, productsRouter)
   app.use(ROUTES.SALES, salesRouter)
