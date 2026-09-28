@@ -2,8 +2,9 @@ import { HttpError } from '@/errors/HttpError'
 import { cursorToB64 } from '@/services/cursorService'
 import { getSaleById, getSaleIncludeOptions, getSalesQueryOptions, getSalesService } from '@/services/salesService'
 import type { GetSaleRequest, GetSalesRequest } from '@/types/salesTypes'
+import { getBody } from '@/utils/request'
 import { failure, success } from '@/utils/response'
-import type { Response } from 'express'
+import type { Request, Response } from 'express'
 
 export async function getSales (req: GetSalesRequest, res: Response) {
   let options
@@ -31,6 +32,15 @@ export async function getSales (req: GetSalesRequest, res: Response) {
   }
 
   return success(res, { sales: result })
+}
+
+export async function createSale (req: Request, res: Response) {
+  const body = await getBody(req)
+
+  const json = JSON.parse(String(body))
+  console.log(json)
+
+  return success(res, { ok: true })
 }
 
 export async function getSale (req: GetSaleRequest, res: Response) {
