@@ -10,3 +10,14 @@ export interface DatabaseStatement {
 }
 
 export type DatabaseStatements = Array<DatabaseStatement>
+
+export interface SuccessInsertionResult {
+  success: true
+}
+
+export interface FailureInsertionResult {
+  success: false
+  message: string
+}
+
+export type InsertionResult = SuccessInsertionResult | FailureInsertionResult

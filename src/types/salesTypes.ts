@@ -1,9 +1,9 @@
 import type z from 'zod'
 import type { Cursor } from './cursorTypes'
-import type { SaleDetailSchema, SaleFullSchema, SalePaymentSchema, SaleSchema, SaleWithDetailsSchema, SaleWithPaymentsSchema } from '@/schemas/salesSchemas'
+import type { SaleDetailSchema, SaleFullSchema, SalePayloadSchema, SalePaymentSchema, SaleSchema, SaleWithDetailsSchema, SaleWithPaymentsSchema } from '@/schemas/salesSchemas'
 import type { Request } from 'express'
 import type { Currency } from './currenciesTypes'
-import type { SALE_INCLUDE } from '@/lib/constants/salesConstants'
+import type { SALE_DOCUMENT_TYPE, SALE_INCLUDE, SALE_TYPE } from '@/lib/constants/salesConstants'
 import type { PAYMENT_METHODS } from '@/lib/constants/paymentsConstants'
 
 export type Sale = z.infer<typeof SaleSchema>
@@ -50,3 +50,17 @@ export interface SalesServiceResult {
   sales: Sale[]
   nextCursor: Cursor | null
 }
+
+export type DocumentType = typeof SALE_DOCUMENT_TYPE[number]
+export type SaleType = typeof SALE_TYPE[number]
+
+export interface Payment {
+  id: string
+  amountPaid: number
+  currency: Currency
+  paymentMethod: string
+  exchangeRate?: number
+  createdAt?: string
+}
+
+export type SalePayload = z.infer<typeof SalePayloadSchema>
