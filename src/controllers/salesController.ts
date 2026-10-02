@@ -1,9 +1,11 @@
 import { HttpError } from '@/errors/HttpError'
+import { SalePayloadSchema } from '@/schemas/salesSchemas'
 import { cursorToB64 } from '@/services/cursorService'
-import { getSaleById, getSaleIncludeOptions, getSalesQueryOptions, getSalesService } from '@/services/salesService'
+import { createSaleByPayload, getSaleById, getSaleIncludeOptions, getSalesQueryOptions, getSalesService } from '@/services/salesService'
 import type { GetSaleRequest, GetSalesRequest } from '@/types/salesTypes'
 import { getBody } from '@/utils/request'
 import { failure, success } from '@/utils/response'
+import { isValidSalePayload } from '@/validations/saleValidations'
 import type { Request, Response } from 'express'
 
 export async function getSales (req: GetSalesRequest, res: Response) {
@@ -38,9 +40,19 @@ export async function createSale (req: Request, res: Response) {
   const body = await getBody(req)
 
   const json = JSON.parse(String(body))
-  console.log(json)
 
-  return success(res, { ok: true })
+  if (!isValidSalePayload(json)) {
+    return failure(res, 'Payload de la venta inválido', { status: 400 })
+  }
+
+  const payload = SalePayloadSchema.safeParse(json).data!
+  const result = await createSaleByPayload(payload)
+
+  if (!result.success) {
+    return failure(res, result.message)  
+  }
+
+  return success(res, result)
 }
 
 export async function getSale (req: GetSaleRequest, res: Response) {

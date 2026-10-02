@@ -1,15 +1,16 @@
 /* eslint-disable no-useless-assignment */
 import { db } from '@/config/db'
 import { SaleDetailSchema, SalePaymentSchema, SaleSchema } from '@/schemas/salesSchemas'
-import type { GetSalesRequestQuery, PaymentMethod, PaymentMethods, Sale, SaleDetail, SaleFull, SaleInclude, SaleIncludeOption, SalePayment, SalesExtendedQueryOptions, SalesServiceResult, SaleWithDetails, SaleWithPayments } from '@/types/salesTypes'
+import type { GetSalesRequestQuery, PaymentMethod, PaymentMethods, Sale, SaleDetail, SaleFull, SaleInclude, SaleIncludeOption, SalePayload, SalePayment, SalesExtendedQueryOptions, SalesServiceResult, SaleWithDetails, SaleWithPayments } from '@/types/salesTypes'
 import { createCursor, createPagination } from './cursorService'
 import type { InArgs, InStatement } from '@libsql/client'
-import type { DatabaseStatements } from '@/types/connectionTypes'
+import type { DatabaseStatements, InsertionResult } from '@/types/connectionTypes'
 import { indexArray } from '@/lib/indexArray'
 import { isEveryEnabled, isSomeEnabled, toEnableAll } from '@/utils/objects'
 import { PAYMENT_METHODS } from '@/lib/constants/paymentsConstants'
 import { SALE_INCLUDE } from '@/lib/constants/salesConstants'
 import { HttpError } from '@/errors/HttpError'
+import { Temporal } from 'temporal-polyfill'
 
 export function getSalePaymentMethod (query: GetSalesRequestQuery): PaymentMethods {
   const methods: Record<string, boolean> = {}
@@ -309,3 +310,101 @@ export async function getSaleById (id: string, include: SaleInclude): Promise<Sa
   
   return sale
 }
+
+export async function createSaleByPayload (payload: SalePayload): Promise<InsertionResult> {
+  const sale = structureSaleByPayload(payload)
+  if (!sale) {
+    return {
+      success: false,
+      message: 'Payload inválido'
+    }
+  }
+
+  const args: InArgs = [
+    sale.id,
+    sale.created_at,
+    sale.last_modified,
+    sale.total,
+    sale.total_discount,
+    sale.general_discount,
+    sale.currency,
+    sale.status,
+    sale.payment_status,
+    sale.document_type,
+    sale.sale_type,
+    sale.document_serie,
+    sale.document_number,
+    sale.client_id,
+    sale.user_id
+  ]
+
+  const result = await db.execute('INSERT INTO sales VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', args)
+  console.log(result)
+
+  return {
+    success: true
+  }
+}
+
+function structureSaleByPayload (payload: SalePayload): SaleFull | null {
+  const saleId = crypto.randomUUID()
+  const now = Temporal.Now.instant().toString()
+  
+  return {
+    id: saleId,
+    client_id: payload.clientId,
+    created_at: now,
+    currency: payload.currency,
+    details: payload.details.map((d) => ({
+      id: crypto.randomUUID(),
+      currency: d.currency,
+      discount: d.discount,
+      iva_rate: d.ivaRate,
+      product_id: d.productId,
+      quantity: d.quantity,
+      sale_id: saleId,
+      unit_price_at_moment: d.unitPriceAtMoment
+    })),
+    document_number: 'null',
+    document_serie: 'null',
+    document_type: payload.documentType,
+    general_discount: payload.generalDiscount,
+    last_modified: now,
+    payment_status: 'PAID',
+    payments: payload.payments.map((p) => ({
+      id: crypto.randomUUID(),
+      amount_paid: p.amountPaid,
+      created_at: p.createdAt ?? now,
+      currency: p.currency,
+      exchange_rate: p.exchangeRate ?? 22,
+      payment_method: p.paymentMethod,
+      sale_id: saleId
+    })),
+    sale_type: payload.saleType,
+    status: 'COMPLETED',
+    total: payload.total,
+    total_discount: payload.totalDiscount,
+    user_id: payload.userId
+  }
+}
+
+/* 
+CREATE TABLE sales (                                                                                                         
+  id TEXT PRIMARY KEY,                                                                                                         
+  created_at TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,                                                    
+  last_modified TEXT DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')) NOT NULL,                                                 
+  total INTEGER NOT NULL,                                                                                                      
+  total_discount INTEGER NOT NULL DEFAULT 0,                                                                                   
+  general_discount INTEGER NOT NULL DEFAULT 0,                                                                                 
+  currency TEXT NOT NULL,                                                                                                      
+  status TEXT NOT NULL,                                                                                                        
+  payment_status TEXT NOT NULL,                                                                                                
+  document_type TEXT NOT NULL,                                                                                                 
+  sale_type TEXT NOT NULL,                                                                                                     
+  -- Campos fiscales nuevos                                                                                                    
+  document_serie TEXT NULL,                                                                                                    
+  document_number TEXT NULL,                                                                                                   
+  client_id TEXT NULL,                                                                                                         
+  user_id TEXT NULL                                                                                                            
+);   
+*/
