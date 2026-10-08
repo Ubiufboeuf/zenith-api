@@ -278,7 +278,7 @@ export async function getSaleById (id: string, include: SaleInclude): Promise<Sa
   const paymentsRows = paymentsResult?.rows ?? []
   const detailsRows = detailsResult?.rows ?? []
 
-  if (paymentsRows.length) {
+  if (include.payments) {
     const salePayments: SalePayment[] = []
 
     for (const paymentRow of paymentsRows) {
@@ -293,7 +293,7 @@ export async function getSaleById (id: string, include: SaleInclude): Promise<Sa
     ;(sale as SaleWithPayments).payments = salePayments
   }
   
-  if (detailsRows.length) {
+  if (include.details) {
     const saleDetails: SaleDetail[] = []
 
     for (const detailRow of detailsRows) {
@@ -302,10 +302,10 @@ export async function getSaleById (id: string, include: SaleInclude): Promise<Sa
       if (!saleDetailValidation.success) continue   
 
       const saleDetail = saleDetailValidation.data
-      saleDetails.push(saleDetail)
-      
-      ;(sale as SaleWithDetails).details = saleDetails
+      saleDetails.push(saleDetail)  
     }
+
+    ;(sale as SaleWithDetails).details = saleDetails
   }
   
   return sale
