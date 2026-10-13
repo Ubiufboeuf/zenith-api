@@ -3,10 +3,11 @@ import { SaleDetailsRowSchema, SalePaymentsRowSchema, SalesRowSchema } from './d
 import { SALE_DOCUMENT_TYPE, SALE_TYPE } from '@/lib/constants/salesConstants'
 import { CURRENCIES } from '@/lib/constants/currenciesConstants'
 import { PAYMENT_METHODS } from '@/lib/constants/paymentsConstants'
+import { ProductWithCodesSchema } from './productsSchemas'
 
 export const SaleSchema = SalesRowSchema
 
-export const SaleDetailSchema = SaleDetailsRowSchema
+export const SaleDetailSchema = SaleDetailsRowSchema.extend({ snapshot: ProductWithCodesSchema })
 export const SaleWithDetailsSchema = SaleSchema.extend({
   details: z.array(SaleDetailSchema)
 })
@@ -42,7 +43,8 @@ export const SalePayloadSchema = z.object({
     unitPriceAtMoment: z.number(),
     ivaRate: z.number(),
     discount: z.number(),
-    currency: z.enum(CURRENCIES)
+    currency: z.enum(CURRENCIES),
+    snapshot: z.string()
   })),
 
   payments: z.array(z.object({

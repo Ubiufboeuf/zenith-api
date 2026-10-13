@@ -11,6 +11,7 @@ import { PAYMENT_METHODS } from '@/lib/constants/paymentsConstants'
 import { SALE_INCLUDE } from '@/lib/constants/salesConstants'
 import { HttpError } from '@/errors/HttpError'
 import { Temporal } from 'temporal-polyfill'
+import { SaleDetailsRowSchema } from '@/schemas/dbSchemas'
 
 export function getSalePaymentMethod (query: GetSalesRequestQuery): PaymentMethods {
   const methods: Record<string, boolean> = {}
@@ -297,12 +298,21 @@ export async function getSaleById (id: string, include: SaleInclude): Promise<Sa
     const saleDetails: SaleDetail[] = []
 
     for (const detailRow of detailsRows) {
-      const saleDetailValidation = SaleDetailSchema.safeParse(detailRow)
+      const saleDetailRowValidation = SaleDetailsRowSchema.safeParse(detailRow)
       
-      if (!saleDetailValidation.success) continue   
+      if (!saleDetailRowValidation.success) continue
 
+      console.log({ saleDetailRowValidation })
+
+      const snapshot = JSON.parse(saleDetailRowValidation.data.snapshot) ?? {}
+      const saleDetailValidation = SaleDetailSchema.safeParse({ ...saleDetailRowValidation.data, snapshot })
+
+      console.log({ saleDetailValidation })
+
+      if (!saleDetailValidation.success) continue
+      
       const saleDetail = saleDetailValidation.data
-      saleDetails.push(saleDetail)  
+      saleDetails.push(saleDetail)
     }
 
     ;(sale as SaleWithDetails).details = saleDetails

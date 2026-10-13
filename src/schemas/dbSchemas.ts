@@ -61,7 +61,8 @@ export const SaleDetailsRowSchema = z.object({
   unit_price_at_moment: z.int(),
   currency: z.enum(CURRENCIES),
   discount: z.int().default(0),
-  iva_rate: z.int().default(DEFAULT_IVA_RATE)
+  iva_rate: z.int().default(DEFAULT_IVA_RATE),
+  snapshot: z.string().default('{}')
 })
 
 export const SalePaymentsRowSchema = z.object({
