@@ -21,9 +21,9 @@ export function getSalePaymentMethod (query: GetSalesRequestQuery): PaymentMetho
     methods[m] = false
   }
 
-  if (!query.payment_method) return methods as PaymentMethods
+  if (!query.paymentMethod) return methods as PaymentMethods
   
-  const items = query.payment_method.split(',')
+  const items = query.paymentMethod.split(',')
 
   if (items.some((i) => i === 'any')) return toEnableAll(methods) as PaymentMethods
 
@@ -47,14 +47,14 @@ export function getSalesQueryOptions (query: GetSalesRequestQuery): SalesExtende
 
   const { currency, since, until } = query
 
-  const payment_method = getSalePaymentMethod(query)
-  const include = getSaleIncludeOptions(query, Object.values(payment_method).some((m) => m))
+  const paymentMethod = getSalePaymentMethod(query)
+  const include = getSaleIncludeOptions(query, Object.values(paymentMethod).some((m) => m))
 
   const extendedQueryOptions: SalesExtendedQueryOptions = {
     limit: pagination.limit,
     cursor: pagination.cursor,
     include,
-    payment_method,
+    paymentMethod,
     currency,
     since,
     until
@@ -95,7 +95,7 @@ export async function getSalesService (query: SalesExtendedQueryOptions): Promis
 }
 
 function getSalesStatementParams (props: SalesExtendedQueryOptions): DatabaseStatements {
-  const { cursor, limit, include, since, until, currency, payment_method } = props
+  const { cursor, limit, include, since, until, currency, paymentMethod } = props
   
   const conditions: string[] = []
   const salesArgs: InArgs = []
@@ -107,12 +107,12 @@ function getSalesStatementParams (props: SalesExtendedQueryOptions): DatabaseSta
   }
 
   if (since) {
-    conditions.push('s.created_at >= ?')
+    conditions.push('s.createdAt >= ?')
     salesArgs.push(since)
   }
 
   if (until) {
-    conditions.push('s.created_at < ?')
+    conditions.push('s.createdAt < ?')
     salesArgs.push(until)
   }
 
@@ -122,24 +122,24 @@ function getSalesStatementParams (props: SalesExtendedQueryOptions): DatabaseSta
   }
 
   // === NUEVO: Filtro EXISTS para métodos de pago ===
-  const somePaymentMethod = isSomeEnabled(payment_method)
-  const everyPaymentMethod = isEveryEnabled(payment_method)
+  const somePaymentMethod = isSomeEnabled(paymentMethod)
+  const everyPaymentMethod = isEveryEnabled(paymentMethod)
 
   if (somePaymentMethod && !everyPaymentMethod) {
     const methods: string[] = []
     
     for (const METHOD of PAYMENT_METHODS) {
       const m = METHOD.toLowerCase() as PaymentMethod
-      if (!payment_method[m]) continue
+      if (!paymentMethod[m]) continue
 
-      methods.push('sp.payment_method = ?')
+      methods.push('sp.paymentMethod = ?')
       salesArgs.push(METHOD)
     }
 
     if (methods.length > 0) {
       conditions.push(`EXISTS (
-        SELECT 1 FROM sale_payments sp 
-        WHERE sp.sale_id = s.id AND (${methods.join(' OR ')})
+        SELECT 1 FROM salePayments sp 
+        WHERE sp.saleId = s.id AND (${methods.join(' OR ')})
       )`)
     }
   }
@@ -158,13 +158,13 @@ function getSalesStatementParams (props: SalesExtendedQueryOptions): DatabaseSta
   salesArgs.push(limit)
 
   const paymentsQuery = `
-    SELECT * FROM sale_payments
-    WHERE sale_id IN (SELECT id FROM (${salesQuery}))
+    SELECT * FROM salePayments
+    WHERE saleId IN (SELECT id FROM (${salesQuery}))
   `
 
   const detailsQuery = `
-    SELECT * FROM sale_details
-    WHERE sale_id IN (SELECT id FROM (${salesQuery}))
+    SELECT * FROM saleDetails
+    WHERE saleId IN (SELECT id FROM (${salesQuery}))
   `
   
   const stmts: DatabaseStatements = [{ sql: salesQuery, args: salesArgs }]
@@ -201,8 +201,8 @@ export async function getSales ({ cursor, limit, include, ...rest }: SalesExtend
   const paymentsRows = paymentsResult?.rows ?? []
   const detailsRows = detailsResult?.rows ?? []
 
-  const indexedPayments = indexArray(paymentsRows as unknown as SalePayment[], 'sale_id')
-  const indexedDetails = indexArray(detailsRows as unknown as SaleDetail[], 'sale_id')
+  const indexedPayments = indexArray(paymentsRows as unknown as SalePayment[], 'saleId')
+  const indexedDetails = indexArray(detailsRows as unknown as SaleDetail[], 'saleId')
 
   const sales: Sale[] = []
 
@@ -244,13 +244,13 @@ function getSaleStatementsParams (id: string, include: SaleInclude): (InStatemen
   `
 
   const paymentsQuery = `
-    SELECT * FROM sale_payments
-    WHERE sale_id = ?
+    SELECT * FROM salePayments
+    WHERE saleId = ?
   `
 
   const detailsQuery = `
-    SELECT * FROM sale_details
-    WHERE sale_id = ?
+    SELECT * FROM saleDetails
+    WHERE saleId = ?
   `
   
   const stmts = [{ sql: saleQuery, args: [id] }]
@@ -325,20 +325,20 @@ function getCreateSaleStatements (sale: SaleFull): DatabaseStatements {
   /* Sales */
   const salesArgs: InArgs = [
     sale.id,
-    sale.created_at,
-    sale.last_modified,
+    sale.createdAt,
+    sale.lastModified,
     sale.total,
-    sale.total_discount,
-    sale.general_discount,
+    sale.totalDiscount,
+    sale.generalDiscount,
     sale.currency,
     sale.status,
-    sale.payment_status,
-    sale.document_type,
-    sale.sale_type,
-    sale.document_serie,
-    sale.document_number,
-    sale.client_id,
-    sale.user_id
+    sale.paymentStatus,
+    sale.documentType,
+    sale.saleType,
+    sale.documentSerie,
+    sale.documentNumber,
+    sale.clientId,
+    sale.userId
   ]
   const salesQuery = `INSERT INTO sales VALUES (${salesArgs.map(() => '?').join(', ')})`
 
@@ -351,12 +351,12 @@ function getCreateSaleStatements (sale: SaleFull): DatabaseStatements {
   for (const payment of payments) {
     const paymentArgs: InArgs = [
       payment.id,
-      payment.sale_id,
-      payment.amount_paid,
+      payment.saleId,
+      payment.amountPaid,
       payment.currency,
-      payment.exchange_rate,
-      payment.payment_method,
-      payment.created_at
+      payment.exchangeRate,
+      payment.paymentMethod,
+      payment.createdAt
     ]
 
     paymentsArgs.push(...paymentArgs)
@@ -364,9 +364,9 @@ function getCreateSaleStatements (sale: SaleFull): DatabaseStatements {
   }
 
   const paymentsQuery = `
-    INSERT INTO sale_payments (
-      id, sale_id, amount_paid, currency,
-      exchange_rate, payment_method, created_at
+    INSERT INTO salePayments (
+      id, saleId, amountPaid, currency,
+      exchangeRate, paymentMethod, createdAt
     )
     VALUES ${paymentsPlaceholders.join(', ')}
   `
@@ -378,13 +378,13 @@ function getCreateSaleStatements (sale: SaleFull): DatabaseStatements {
   for (const detail of details) {
     const detailArgs: InArgs = [
       detail.id,
-      detail.sale_id,
-      detail.product_id,
+      detail.saleId,
+      detail.productId,
       detail.quantity,
-      detail.unit_price_at_moment,
+      detail.unitPriceAtMoment,
       detail.currency,
       detail.discount,
-      detail.iva_rate,
+      detail.ivaRate,
       JSON.stringify(detail.snapshot)
     ]
     detailsArgs.push(...detailArgs)
@@ -392,10 +392,10 @@ function getCreateSaleStatements (sale: SaleFull): DatabaseStatements {
   }
 
   const detailsQuery = `
-    INSERT INTO sale_details (
-      id, sale_id, product_id, quantity,
-      unit_price_at_moment, currency, discount,
-      iva_rate, snapshot
+    INSERT INTO saleDetails (
+      id, saleId, productId, quantity,
+      unitPriceAtMoment, currency, discount,
+      ivaRate, snapshot
     )
     VALUES ${detailsPlaceholders.join(', ')}`
 
@@ -432,40 +432,40 @@ function structureSaleByPayload (payload: SalePayload): SaleFull | null {
   
   return {
     id: saleId,
-    client_id: payload.clientId,
-    created_at: now,
+    clientId: payload.clientId,
+    createdAt: now,
     currency: payload.currency,
     details: payload.details.map((d) => ({
       id: crypto.randomUUID(),
       currency: d.currency,
       discount: d.discount,
-      iva_rate: d.ivaRate,
-      product_id: d.productId,
+      ivaRate: d.ivaRate,
+      productId: d.productId,
       quantity: d.quantity,
-      sale_id: saleId,
-      unit_price_at_moment: d.unitPriceAtMoment,
+      saleId: saleId,
+      unitPriceAtMoment: d.unitPriceAtMoment,
       snapshot: JSON.parse(d.snapshot)
     })),
-    document_number: 'null',
-    document_serie: 'null',
-    document_type: payload.documentType,
-    general_discount: payload.generalDiscount,
-    last_modified: now,
-    payment_status: 'PAID',
+    documentNumber: 'null',
+    documentSerie: 'null',
+    documentType: payload.documentType,
+    generalDiscount: payload.generalDiscount,
+    lastModified: now,
+    paymentStatus: 'PAID',
     payments: payload.payments.map((p) => ({
       id: crypto.randomUUID(),
-      amount_paid: p.amountPaid,
-      created_at: p.createdAt ?? now,
+      amountPaid: p.amountPaid,
+      createdAt: p.createdAt ?? now,
       currency: p.currency,
-      exchange_rate: p.exchangeRate ?? 22,
-      payment_method: p.paymentMethod,
-      sale_id: saleId
+      exchangeRate: p.exchangeRate ?? 22,
+      paymentMethod: p.paymentMethod,
+      saleId: saleId
     })),
-    sale_type: payload.saleType,
+    saleType: payload.saleType,
     status: 'COMPLETED',
     total: payload.total,
-    total_discount: payload.totalDiscount,
-    user_id: payload.userId
+    totalDiscount: payload.totalDiscount,
+    userId: payload.userId
   }
 }
 

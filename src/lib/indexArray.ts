@@ -37,7 +37,7 @@ export function indexArray<T, R = T> (
 export function indexCodes (codesRows: Row[]): Map<string, ProductCode[]> {
   return indexArray(
     codesRows as unknown as ProductCode[],
-    'product_id',
+    'productId',
     (item) => item.id ? normalizeCodeRow(item) : undefined as unknown as ProductCode,
     { filter: 'onNullishIgnore' }
   )
@@ -46,7 +46,7 @@ export function indexCodes (codesRows: Row[]): Map<string, ProductCode[]> {
 export function indexEvents (eventsRows: Row[]): Map<string, ProductEvent[]> {
   return indexArray(
     eventsRows as unknown as ProductEvent[],
-    'product_id',
+    'productId',
     (item) => item.id ? normalizeEventRow(item) : undefined as unknown as ProductEvent,
     { filter: 'onNullishIgnore' }
   )

@@ -1,6 +1,6 @@
 /* eslint-disable no-useless-assignment */
 import { db } from '@/config/db'
-import type { CreateProduct, CreateProductResult, GetProductRequest, GetProductRequestQuery, GetProductsRequestQuery, Product, ProductCode, ProductCodesQueryOptions, ProductCodesServiceResult, ProductEvent, ProductInclude, ProductIncludeOption, ProductQueryOptions, ProductsQueryOptions, ProductsServiceResult, ProductWithCodes, ProductWithEvents, StrictCreateProduct } from '@/types/productsTypes'
+import type { CreateProduct, CreateProductResult, GetProductRequestQuery, GetProductsRequestQuery, Product, ProductCode, ProductCodesServiceResult, ProductEvent, ProductInclude, ProductIncludeOption, ProductQueryOptions, ProductsQueryOptions, ProductsServiceResult, ProductWithCodes, ProductWithEvents, StrictCreateProduct } from '@/types/productsTypes'
 import type { InArgs, InStatement, Row } from '@libsql/client'
 import { createCursor, createPagination, getVisibleRows } from './cursorService'
 import { ProductsRowSchema } from '@/schemas/dbSchemas'
@@ -74,7 +74,7 @@ function getProductsStatements (options: ProductsQueryOptions): DatabaseStatemen
   }
 
   if (code) {
-    joins.push('product_codes pc ON pc.product_id = p.id')
+    joins.push('productCodes pc ON pc.productId = p.id')
     conditions.push('pc.code = ?')
     productsArgs.push(code)
   }
@@ -98,13 +98,13 @@ function getProductsStatements (options: ProductsQueryOptions): DatabaseStatemen
   productsArgs.push(limit)
 
   const codesQuery = `
-    SELECT pc.*, pc.id AS code_id FROM product_codes pc
-    WHERE product_id IN (SELECT id FROM (${productsQuery}))
+    SELECT pc.*, pc.id AS codeId FROM productCodes pc
+    WHERE productId IN (SELECT id FROM (${productsQuery}))
   `
 
   const eventsQuery = `
-    SELECT pe.*, pe.id AS event_id FROM product_events pe
-    WHERE product_id IN (SELECT id FROM (${productsQuery}))
+    SELECT pe.*, pe.id AS eventId FROM productEvents pe
+    WHERE productId IN (SELECT id FROM (${productsQuery}))
   `
   
   const stmts: DatabaseStatements = [{ sql: productsQuery, args: productsArgs }]
@@ -178,13 +178,13 @@ function getProductStatements (options: ProductQueryOptions): DatabaseStatements
   `
 
   const codesQuery = `
-    SELECT pc.*, pc.id AS code_id FROM product_codes pc
-    WHERE product_id IN (SELECT id FROM (${productQuery}))
+    SELECT pc.*, pc.id AS codeId FROM productCodes pc
+    WHERE productId IN (SELECT id FROM (${productQuery}))
   `
   
   const eventsQuery = `
-    SELECT pe.*, pe.id AS event_id FROM product_events pe
-    WHERE product_id IN (SELECT id FROM (${productQuery}))
+    SELECT pe.*, pe.id AS eventId FROM productEvents pe
+    WHERE productId IN (SELECT id FROM (${productQuery}))
   `
 
   const stmts: DatabaseStatements = [{ sql: productQuery, args: [id] }]
@@ -244,10 +244,10 @@ export async function getProductsResolvingCodes (codes: string[]): Promise<Produ
   const placeholders = codes.map(() => '?').join(', ')
 
   const productsQuery = `
-    SELECT p.*, pc.id AS code_id, pc.* FROM products p
-    INNER JOIN product_codes pc ON p.id = pc.product_id
+    SELECT p.*, pc.id AS codeId, pc.* FROM products p
+    INNER JOIN productCodes pc ON p.id = pc.productId
     WHERE p.id IN (
-      SELECT DISTINCT product_id FROM product_codes WHERE code IN (${placeholders})
+      SELECT DISTINCT productId FROM productCodes WHERE code IN (${placeholders})
     )
   `
 
@@ -257,12 +257,12 @@ export async function getProductsResolvingCodes (codes: string[]): Promise<Produ
   const productsMap = new Map<string, { prodRow: Row, codes: ProductCode[] }>()
 
   for (const row of productsRows) {
-    const prodId = row.product_id as string
+    const prodId = row.productId as string
     
     const codeValidation = ProductCodeSchema.safeParse(row)
     if (!codeValidation.success) continue
     const validCode = codeValidation.data
-    validCode.id = row.code_id as string
+    validCode.id = row.codeId as string
 
     if (!productsMap.has(prodId)) {
       productsMap.set(prodId, { prodRow: row, codes: [] })
@@ -292,7 +292,7 @@ function formProductWithCodes (row: Row, rows: (Row | ProductCode)[]) {
   
   for (const code of rows) {
     const codeValidation = ProductCodeSchema.safeParse(code)
-    if (!codeValidation.success || codeValidation.data.product_id !== product.id) continue
+    if (!codeValidation.success || codeValidation.data.productId !== product.id) continue
 
     codes.push(codeValidation.data)
   }
@@ -369,10 +369,10 @@ async function createNewProduct (product: StrictCreateProduct): Promise<void> {
     product.provider ?? '',
     product.brand ?? '',
     product.category ?? '',
-    product.cost_price,
-    product.cost_currency,
-    product.sale_price,
-    product.sale_currency,
+    product.costPrice,
+    product.costCurrency,
+    product.salePrice,
+    product.saleCurrency,
     product.stock ?? 0
   ]
   const eventArgs: InArgs = [
@@ -388,10 +388,10 @@ async function createNewProduct (product: StrictCreateProduct): Promise<void> {
   const eventPlaceholders = eventArgs.map(() => '?').join(', ')
 
   const stmts: InStatement[] = [
-    { sql: `INSERT INTO products (id, title, subtitle, provider, brand, category, cost_price, cost_currency, sale_price, sale_currency, stock)
+    { sql: `INSERT INTO products (id, title, subtitle, provider, brand, category, costPrice, costCurrency, salePrice, saleCurrency, stock)
             VALUES (${productPlaceholders})`,
       args: productArgs },
-    { sql: `INSERT INTO product_events (id, product_id, event_type, previous_value, new_value, created_at)
+    { sql: `INSERT INTO productEvents (id, productId, eventType, previousValue, newValue, createdAt)
             VALUES (${eventPlaceholders})`,
       args: eventArgs }
   ]
@@ -401,13 +401,13 @@ async function createNewProduct (product: StrictCreateProduct): Promise<void> {
     const args: InArgs = []
     const placeholders: string[] = []
 
-    for (const { code, product_id, type, is_main } of codes) {
-      args.push(crypto.randomUUID(), product_id, code, type, is_main ? '1' : '0')
+    for (const { code, productId, type, isMain } of codes) {
+      args.push(crypto.randomUUID(), productId, code, type, isMain ? '1' : '0')
       placeholders.push('(?, ?, ?, ?, ?)')
     }
     
     stmts.push({
-      sql: `INSERT INTO product_codes (id, product_id, code, type, is_main)
+      sql: `INSERT INTO productCodes (id, productId, code, type, isMain)
             VALUES ${placeholders.join(', ')}`,
       args: args
     })
@@ -435,7 +435,7 @@ export async function getProductCodesService (id: string, query: GetProductReque
 function getProductCodesStatements (id: string, pagination: Pagination): InStatement {
   const { cursor, limit } = pagination
 
-  const conditions: string[] = ['pc.product_id = ?']
+  const conditions: string[] = ['pc.productId = ?']
   const args: InArgs = [id]
 
   const lastId = cursor?.lastId ?? null
@@ -449,7 +449,7 @@ function getProductCodesStatements (id: string, pagination: Pagination): InState
     : ''
   
   const codesQuery = `
-    SELECT pc.* FROM product_codes pc
+    SELECT pc.* FROM productCodes pc
     ${whereClause}
     ORDER BY pc.id ASC
     LIMIT ?

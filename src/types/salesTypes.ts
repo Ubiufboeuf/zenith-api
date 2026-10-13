@@ -17,7 +17,7 @@ export type GetSalesRequest = Request<null, null, null, {
   limit?: string
   cursor?: string
   include?: string
-  payment_method?: string
+  paymentMethod?: string
   [key: string]: string | undefined
 } & SalesQueryOptions>
 
@@ -43,7 +43,7 @@ export interface SalesExtendedQueryOptions extends SalesQueryOptions {
   limit: number
   cursor: Cursor | null
   include: Record<SaleIncludeOption, boolean>
-  payment_method: Record<PaymentMethod, boolean>
+  paymentMethod: Record<PaymentMethod, boolean>
 }
 
 export interface SalesServiceResult {

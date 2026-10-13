@@ -22,11 +22,11 @@ export function normalizeCodeRow (item: any, strictness: Strictness = 'low') {
   }
   
   return {
-    id: value.id ?? value.code_id,
-    product_id: value.product_id,
+    id: value.id ?? value.codeId,
+    productId: value.productId,
     code: value.code,
     type: value.type,
-    is_main: value.is_main
+    isMain: value.isMain
   }
 }
 export function normalizeEventRow (item: any, strictness?: 'none'): any
@@ -45,11 +45,11 @@ export function normalizeEventRow (item: Row, strictness: Strictness = 'low') {
   }
 
   return {
-    id: value.id ?? value.code_id,
-    product_id: value.product_id,
-    created_at: value.created_at,
-    event_type: value.event_type,
-    new_value: value.new_value,
-    previous_value: value.previous_value
+    id: value.id ?? value.codeId,
+    productId: value.productId,
+    createdAt: value.createdAt,
+    eventType: value.eventType,
+    newValue: value.newValue,
+    previousValue: value.previousValue
   }
 }

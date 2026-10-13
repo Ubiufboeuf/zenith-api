@@ -2,7 +2,7 @@ import z from 'zod'
 import { ProductCodesRowSchema, ProductEventsRowSchema, ProductsRowSchema } from './dbSchemas'
 
 export const ProductCodeSchema = ProductCodesRowSchema.extend({
-  is_main: z.boolean().catch((ctx: unknown) => {
+  isMain: z.boolean().catch((ctx: unknown) => {
     if (!ctx) return false
     if (typeof ctx === 'number') return ctx === 1
     return ctx === '1'
@@ -31,7 +31,7 @@ export const CreateProductSchema = ProductSchema
     codes: z.array(
       ProductCodeSchema
         .omit({ id: true })
-        .partial({ is_main: true })
+        .partial({ isMain: true })
     )
     .default([])
     .optional()
@@ -39,8 +39,8 @@ export const CreateProductSchema = ProductSchema
 
 export const StrictCreateProductSchema = CreateProductSchema.required({
   title: true,
-  cost_price: true,
-  cost_currency: true,
-  sale_price: true,
-  sale_currency: true
+  costPrice: true,
+  costCurrency: true,
+  salePrice: true,
+  saleCurrency: true
 })
