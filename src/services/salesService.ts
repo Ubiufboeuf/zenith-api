@@ -321,16 +321,9 @@ export async function getSaleById (id: string, include: SaleInclude): Promise<Sa
   return sale
 }
 
-export async function createSaleByPayload (payload: SalePayload): Promise<InsertionResult> {
-  const sale = structureSaleByPayload(payload)
-  if (!sale) {
-    return {
-      success: false,
-      message: 'Payload inválido'
-    }
-  }
-
-  const args: InArgs = [
+function getCreateSaleStatements (sale: SaleFull): DatabaseStatements {
+  /* Sales */
+  const salesArgs: InArgs = [
     sale.id,
     sale.created_at,
     sale.last_modified,
@@ -347,9 +340,86 @@ export async function createSaleByPayload (payload: SalePayload): Promise<Insert
     sale.client_id,
     sale.user_id
   ]
+  const salesQuery = `INSERT INTO sales VALUES (${salesArgs.map(() => '?').join(', ')})`
 
-  const result = await db.execute('INSERT INTO sales VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', args)
-  console.log(result)
+  const { details, payments } = sale
+
+  /* Payments */
+  const paymentsArgs: InArgs = []
+  const paymentsPlaceholders: string[] = []
+
+  for (const payment of payments) {
+    const paymentArgs: InArgs = [
+      payment.id,
+      payment.sale_id,
+      payment.amount_paid,
+      payment.currency,
+      payment.exchange_rate,
+      payment.payment_method,
+      payment.created_at
+    ]
+
+    paymentsArgs.push(...paymentArgs)
+    paymentsPlaceholders.push(`(${paymentArgs.map(() => '?').join(', ')})`)
+  }
+
+  const paymentsQuery = `
+    INSERT INTO sale_payments (
+      id, sale_id, amount_paid, currency,
+      exchange_rate, payment_method, created_at
+    )
+    VALUES ${paymentsPlaceholders.join(', ')}
+  `
+  
+  /* Details */
+  const detailsArgs: InArgs = []
+  const detailsPlaceholders: string[] = []
+
+  for (const detail of details) {
+    const detailArgs: InArgs = [
+      detail.id,
+      detail.sale_id,
+      detail.product_id,
+      detail.quantity,
+      detail.unit_price_at_moment,
+      detail.currency,
+      detail.discount,
+      detail.iva_rate,
+      JSON.stringify(detail.snapshot)
+    ]
+    detailsArgs.push(...detailArgs)
+    detailsPlaceholders.push(`(${detailArgs.map(() => '?').join(', ')})`)
+  }
+
+  const detailsQuery = `
+    INSERT INTO sale_details (
+      id, sale_id, product_id, quantity,
+      unit_price_at_moment, currency, discount,
+      iva_rate, snapshot
+    )
+    VALUES ${detailsPlaceholders.join(', ')}`
+
+  const stmts: DatabaseStatements = [{ sql: salesQuery, args: salesArgs }]
+  if (payments.length > 0) stmts.push({ sql: paymentsQuery, args: paymentsArgs })
+  if (details.length > 0) stmts.push({ sql: detailsQuery, args: detailsArgs })
+
+  return stmts
+}
+
+export async function createSaleByPayload (payload: SalePayload): Promise<InsertionResult> {
+  const sale = structureSaleByPayload(payload)
+  if (!sale) {
+    return {
+      success: false,
+      message: 'Payload inválido'
+    }
+  }
+
+  const stmts = getCreateSaleStatements(sale)
+
+  // const result = await db.execute('INSERT INTO sales VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', args)
+  const batchResult = await db.batch(stmts)
+  console.log(batchResult)
 
   return {
     success: true
@@ -373,7 +443,8 @@ function structureSaleByPayload (payload: SalePayload): SaleFull | null {
       product_id: d.productId,
       quantity: d.quantity,
       sale_id: saleId,
-      unit_price_at_moment: d.unitPriceAtMoment
+      unit_price_at_moment: d.unitPriceAtMoment,
+      snapshot: JSON.parse(d.snapshot)
     })),
     document_number: 'null',
     document_serie: 'null',
