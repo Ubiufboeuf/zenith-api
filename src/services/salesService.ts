@@ -399,7 +399,21 @@ function getCreateSaleStatements (sale: SaleFull): DatabaseStatements {
     )
     VALUES ${detailsPlaceholders.join(', ')}`
 
-  const stmts: DatabaseStatements = [{ sql: salesQuery, args: salesArgs }]
+  /* Stock */
+  const stockStmts: DatabaseStatements = details.map((detail) => ({
+    sql: `
+      UPDATE products
+      SET stock = stock - ?
+      WHERE id = ? AND stock >= ?
+    `,
+    args: [detail.quantity, detail.productId, detail.quantity]
+  }))
+
+  const stmts: DatabaseStatements = [
+    { sql: salesQuery, args: salesArgs },
+    ...stockStmts
+  ]
+  
   if (payments.length > 0) stmts.push({ sql: paymentsQuery, args: paymentsArgs })
   if (details.length > 0) stmts.push({ sql: detailsQuery, args: detailsArgs })
 
