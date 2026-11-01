@@ -404,9 +404,9 @@ function getCreateSaleStatements (sale: SaleFull): DatabaseStatements {
     sql: `
       UPDATE products
       SET stock = stock - ?
-      WHERE id = ? AND stock >= ?
+      WHERE id = ?
     `,
-    args: [detail.quantity, detail.productId, detail.quantity]
+    args: [detail.quantity, detail.productId]
   }))
 
   const stmts: DatabaseStatements = [
